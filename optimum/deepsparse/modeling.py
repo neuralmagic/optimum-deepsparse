@@ -155,6 +155,10 @@ class DeepSparseModelForImageClassification(DeepSparseModel):
         if not self.deepsparse_engine:
             self.deepsparse_engine = Engine(model=self.model, batch_size=1)
 
+        np_inputs = isinstance(pixel_values, np.ndarray)
+        if not np_inputs:
+            pixel_values = np.array(pixel_values)
+
         outputs = self.deepsparse_engine(list(np.expand_dims(pixel_values, axis=0)))
-        logits = torch.tensor(outputs[0])
+        logits = torch.from_numpy(outputs[0]) if not np_inputs else outputs[0]
         return ImageClassifierOutput(logits=logits)

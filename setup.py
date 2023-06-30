@@ -14,6 +14,7 @@ except Exception as error:
 INSTALL_REQUIRE = [
     "deepsparse",  # TODO: move to stable release
     "optimum[exporters]>=1.8.0",
+    "pydantic>=1.8.2,<2.0.0",
 ]
 
 TESTS_REQUIRE = ["pytest", "parameterized", "Pillow", "evaluate", "diffusers", "py-cpuinfo"]

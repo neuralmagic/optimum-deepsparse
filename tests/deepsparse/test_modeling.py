@@ -73,11 +73,11 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
             transformers_outputs = transformers_model(**inputs)
         for input_type in ["pt", "np"]:
             inputs = preprocessor(images=image, return_tensors=input_type)
-            fai_outputs = nm_model(**inputs)
-            self.assertIn("logits", fai_outputs)
-            self.assertIsInstance(fai_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            nm_outputs = nm_model(**inputs)
+            self.assertIn("logits", nm_outputs)
+            self.assertIsInstance(nm_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             # Compare tensor outputs
-            self.assertTrue(torch.allclose(torch.Tensor(fai_outputs.logits), transformers_outputs.logits, atol=1e-4))
+            self.assertTrue(torch.allclose(torch.Tensor(nm_outputs.logits), transformers_outputs.logits, atol=1e-4))
 
         gc.collect()
 
