@@ -12,7 +12,7 @@ from transformers.file_utils import add_start_docstrings
 from optimum.exporters import TasksManager
 from optimum.exporters.onnx import export
 from optimum.modeling_base import OptimizedModel
-from pathlib import Path
+
 
 ONNX_WEIGHTS_NAME = "model.onnx"
 ONNX_WEIGHTS_NAME_STATIC = "model_static.onnx"

@@ -6,9 +6,6 @@ import torch
 import tqdm
 import transformers
 from datasets import Dataset
-from deepsparse import Engine
-
-
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -19,6 +16,8 @@ from transformers.file_utils import add_start_docstrings, add_start_docstrings_t
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
 )
+
+from deepsparse import Engine
 
 from .modeling_base import DeepSparseBaseModel
 

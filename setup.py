@@ -2,6 +2,7 @@ import re
 
 from setuptools import find_namespace_packages, setup
 
+
 # Ensure we match the version set in optimum-deepsparse/version.py
 try:
     filepath = "optimum/deepsparse/version.py"
