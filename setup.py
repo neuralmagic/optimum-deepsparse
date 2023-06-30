@@ -1,31 +1,28 @@
+import re
+
 from setuptools import find_namespace_packages, setup
 
+# Ensure we match the version set in optimum-deepsparse/version.py
+try:
+    filepath = "optimum/deepsparse/version.py"
+    with open(filepath) as version_file:
+        (__version__,) = re.findall('__version__ = "(.*)"', version_file.read())
+except Exception as error:
+    assert False, "Error: Could not open '%s' due %s\n" % (filepath, error)
+
 INSTALL_REQUIRE = [
-    "deepsparse-nightly", # TODO: move to stable release
-    "optimum>=1.8.0",
-    "transformers>=4.20.0",
-    "datasets>=1.4.0",
-    "sentencepiece",
-    "scipy",
+    "deepsparse",  # TODO: move to stable release
+    "optimum[exporters]>=1.8.0",
 ]
 
 TESTS_REQUIRE = ["pytest", "parameterized", "Pillow", "evaluate", "diffusers", "py-cpuinfo"]
 
-QUALITY_REQUIRE = ["black~=23.1", "ruff>=0.0.241"]
+QUALITY_REQUIRE = ["black~=23.1", "ruff>=0.0.241,<=0.0.259"]
 
 EXTRA_REQUIRE = {
-    "testing": [
-        "filelock",
-        "GitPython",
-        "parameterized",
-        "psutil",
-        "pytest",
-        "pytest-pythonpath",
-        "pytest-xdist",
-        "librosa",
-        "soundfile",
-    ],
+    "tests": TESTS_REQUIRE,
     "quality": QUALITY_REQUIRE,
+    "dev": TESTS_REQUIRE + QUALITY_REQUIRE,
 }
 
 setup(
