@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# ONNX files
+*.onnx
+
 # C extensions
 *.so
 

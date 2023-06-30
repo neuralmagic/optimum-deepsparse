@@ -17,8 +17,6 @@ from transformers.modeling_outputs import (
     ImageClassifierOutput,
 )
 
-from deepsparse import Engine
-
 from .modeling_base import DeepSparseBaseModel
 
 
@@ -152,8 +150,7 @@ class DeepSparseModelForImageClassification(DeepSparseModel):
         pixel_values: None,
         **kwargs,
     ):
-        if not self.deepsparse_engine:
-            self.deepsparse_engine = Engine(model=self.model, batch_size=1)
+        self.compile()
 
         np_inputs = isinstance(pixel_values, np.ndarray)
         if not np_inputs:

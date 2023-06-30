@@ -74,6 +74,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         for input_type in ["pt", "np"]:
             inputs = preprocessor(images=image, return_tensors=input_type)
             nm_outputs = nm_model(**inputs)
+            self.assertTrue(nm_model.deepsparse_engine.fraction_of_supported_ops >= 0.99)
             self.assertIn("logits", nm_outputs)
             self.assertIsInstance(nm_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             # Compare tensor outputs

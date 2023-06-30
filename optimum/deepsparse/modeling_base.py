@@ -9,6 +9,7 @@ from huggingface_hub.utils import EntryNotFoundError
 from transformers import PretrainedConfig
 from transformers.file_utils import add_start_docstrings
 
+from deepsparse import Engine
 from optimum.exporters import TasksManager
 from optimum.exporters.onnx import export
 from optimum.modeling_base import OptimizedModel
@@ -215,6 +216,18 @@ class DeepSparseBaseModel(OptimizedModel):
             **kwargs,
         )
 
+    def compile(self, batch_size=1):
+        """
+        Compiles the model with DeepSparse
+        """
+        if self.deepsparse_engine is None:
+            self.is_dynamic = self._check_is_dynamic()
+            if self.is_dynamic:
+                self._reshape(self.model, self.input_shape_dict, self.output_shape_dict)
+
+            logger.info("Compiling the model and creating the engine...")
+            self.deepsparse_engine = Engine(model=self.model, batch_size=batch_size)
+
     def _reshape(
         self,
         model_path,
@@ -232,22 +245,26 @@ class DeepSparseBaseModel(OptimizedModel):
             output_shape_dict (`int`):
                 Output shapes for the model.
         """
+        # Reset the engine so we know to recompile
         self.deepsparse_engine = None
-        if isinstance(model_path, str) and model_path.endswith(".onnx"):
-            if input_shape_dict is None or output_shape_dict is None:
-                raise ValueError(
-                    "The model provided has dynamic axes in input / output, please provide input and output shapes for compilation!"
-                )
-            from onnx import shape_inference
-            from onnx.tools import update_model_dims
 
-            model = onnx.load(model_path)
-            updated_model = update_model_dims.update_inputs_outputs_dims(model, input_shape_dict, output_shape_dict)
-            inferred_model = shape_inference.infer_shapes(updated_model)
+        if not isinstance(model_path, str) or not model_path.endswith(".onnx"):
+            raise ValueError("The model_path isn't a path to an ONNX '{model_path}'")
 
-            static_model_path = Path(model_path).parent / ONNX_WEIGHTS_NAME_STATIC
-            onnx.save(inferred_model, static_model_path)
-            self.model = static_model_path
+        if input_shape_dict is None or output_shape_dict is None:
+            raise ValueError(
+                "The model provided has dynamic axes in input / output, please provide input and output shapes for compilation!"
+            )
+        from onnx import shape_inference
+        from onnx.tools import update_model_dims
+
+        model = onnx.load(model_path)
+        updated_model = update_model_dims.update_inputs_outputs_dims(model, input_shape_dict, output_shape_dict)
+        inferred_model = shape_inference.infer_shapes(updated_model)
+
+        static_model_path = str(Path(model_path).parent / ONNX_WEIGHTS_NAME_STATIC)
+        onnx.save(inferred_model, static_model_path)
+        self.model = static_model_path
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError
