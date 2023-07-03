@@ -227,6 +227,7 @@ class DeepSparseBaseModel(OptimizedModel):
 
             logger.info("Compiling the model and creating the engine...")
             self.deepsparse_engine = Engine(model=self.model, batch_size=batch_size)
+            logger.info(self.deepsparse_engine)
 
     def _reshape(
         self,
