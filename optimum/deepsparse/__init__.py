@@ -20,6 +20,7 @@ from transformers.utils import _LazyModule
 _import_structure = {
     "modeling": [
         "DeepSparseModel",
+        "DeepSparseModelForSequenceClassification",
         "DeepSparseModelForImageClassification",
     ],
 }
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from .modeling import (
         DeepSparseModel,
         DeepSparseModelForImageClassification,
+        DeepSparseModelForSequenceClassification,
     )
 else:
     import sys
