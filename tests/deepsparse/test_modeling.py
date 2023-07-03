@@ -20,9 +20,15 @@ import requests
 import torch
 from parameterized import parameterized
 from PIL import Image
-from transformers import AutoFeatureExtractor, AutoModelForImageClassification, AutoModelForSequenceClassification, PretrainedConfig, pipeline, set_seed
+from transformers import (
+    AutoFeatureExtractor,
+    AutoModelForImageClassification,
+    PretrainedConfig,
+    pipeline,
+    set_seed,
+)
 
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification
+from optimum.deepsparse import DeepSparseModelForImageClassification
 from optimum.utils import (
     logging,
 )
@@ -33,13 +39,24 @@ SEED = 42
 logger = logging.get_logger()
 
 MODEL_DICT = {
-    "mobilenet_v1": ["google/mobilenet_v1_0.75_192", "[1, 3, 192, 192]", {"pixel_values": [1, 3, 192, 192]}, {"logits": [1, 1001]}],
+    "mobilenet_v1": [
+        "google/mobilenet_v1_0.75_192",
+        "[1, 3, 192, 192]",
+        {"pixel_values": [1, 3, 192, 192]},
+        {"logits": [1, 1001]},
+    ],
     "mobilenet_v2": [
-        "hf-internal-testing/tiny-random-MobileNetV2Model", "[1, 3, 32, 32]",
+        "hf-internal-testing/tiny-random-MobileNetV2Model",
+        "[1, 3, 32, 32]",
         {"pixel_values": [1, 3, 32, 32]},
         {"logits": [1, 2]},
     ],
-    "resnet": ["hf-internal-testing/tiny-random-resnet",  "[1, 3, 224, 224]", {"pixel_values": [1, 3, 224, 224]}, {"logits": [1, 1000]}],
+    "resnet": [
+        "hf-internal-testing/tiny-random-resnet",
+        "[1, 3, 224, 224]",
+        {"pixel_values": [1, 3, 224, 224]},
+        {"logits": [1, 1000]},
+    ],
 }
 
 

@@ -147,7 +147,6 @@ class DeepSparseBaseModel(OptimizedModel):
                 f"{self.__class__.__name__} received {', '.join(kwargs.keys())}, but do not accept those arguments."
             )
 
-
         # This attribute is needed to keep one reference on the temporary directory, since garbage collecting it
         # would end-up removing the directory containing the underlying ONNX model.
         self._model_save_dir_tempdirectory_instance = None
@@ -163,7 +162,7 @@ class DeepSparseBaseModel(OptimizedModel):
 
         self.preprocessors = preprocessors if preprocessors is not None else []
 
-        # Registers the DeepSparseModelForXXX classes into the transformers AutoModel classes to avoid warnings when creating a pipeline 
+        # Registers the DeepSparseModelForXXX classes into the transformers AutoModel classes to avoid warnings when creating a pipeline
         # https://github.com/huggingface/transformers/blob/cad61b68396a1a387287a8e2e2fef78a25b79383/src/transformers/pipelines/base.py#L863
         AutoConfig.register(self.model_type, AutoConfig)
         if hasattr(self.auto_model_class, "register"):
