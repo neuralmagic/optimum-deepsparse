@@ -12,7 +12,7 @@ except Exception as error:
     assert False, "Error: Could not open '%s' due %s\n" % (filepath, error)
 
 INSTALL_REQUIRE = [
-    "deepsparse",  # TODO: move to stable release
+    "deepsparse-nightly",  # TODO: move to stable release
     "optimum[exporters]>=1.8.0",
     "pydantic>=1.8.2,<2.0.0",
 ]
