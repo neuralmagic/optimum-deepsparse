@@ -8,17 +8,17 @@ from typing import Dict, List, Optional, Tuple, Union
 import onnx
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
-from transformers import AutoConfig, PretrainedConfig
+from transformers import AutoModel, AutoConfig, PretrainedConfig
 from transformers.file_utils import add_start_docstrings
 
 import deepsparse
 from optimum.exporters import TasksManager
-from optimum.exporters.onnx import export
-from optimum.modeling_base import OptimizedModel
+from optimum.exporters.onnx import main_export
+from optimum.modeling_base import OptimizedModel, FROM_PRETRAINED_START_DOCSTRING
+from optimum.onnxruntime import ORTModel
+from optimum.onnxruntime.utils import ONNX_WEIGHTS_NAME
+from optimum.utils.save_utils import maybe_load_preprocessors, maybe_save_preprocessors
 
-
-ONNX_WEIGHTS_NAME = "model.onnx"
-ONNX_WEIGHTS_NAME_STATIC = "model_static.onnx"
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,8 @@ def override_onnx_input_shapes(
     """,
 )
 class DeepSparseBaseModel(OptimizedModel):
-    auto_model_class = None
+    model_type = "onnx_model"
+    auto_model_class = AutoModel
     export_feature = None
 
     @classmethod
@@ -147,18 +148,18 @@ class DeepSparseBaseModel(OptimizedModel):
                 f"{self.__class__.__name__} received {', '.join(kwargs.keys())}, but do not accept those arguments."
             )
 
-        # This attribute is needed to keep one reference on the temporary directory, since garbage collecting it
-        # would end-up removing the directory containing the underlying ONNX model.
-        self._model_save_dir_tempdirectory_instance = None
-        if model_save_dir is None:
-            self.model_save_dir = Path(model._model_path).parent
-        elif isinstance(model_save_dir, TemporaryDirectory):
-            self._model_save_dir_tempdirectory_instance = model_save_dir
-            self.model_save_dir = Path(model_save_dir.name)
-        elif isinstance(model_save_dir, str):
-            self.model_save_dir = Path(model_save_dir)
-        else:
-            self.model_save_dir = model_save_dir
+        # # This attribute is needed to keep one reference on the temporary directory, since garbage collecting it
+        # # would end-up removing the directory containing the underlying ONNX model.
+        # self._model_save_dir_tempdirectory_instance = None
+        # if model_save_dir is None:
+        #     self.model_save_dir = Path(model._model_path).parent
+        # elif isinstance(model_save_dir, TemporaryDirectory):
+        #     self._model_save_dir_tempdirectory_instance = model_save_dir
+        #     self.model_save_dir = Path(model_save_dir.name)
+        # elif isinstance(model_save_dir, str):
+        #     self.model_save_dir = Path(model_save_dir)
+        # else:
+        #     self.model_save_dir = model_save_dir
 
         self.preprocessors = preprocessors if preprocessors is not None else []
 
@@ -170,7 +171,7 @@ class DeepSparseBaseModel(OptimizedModel):
 
     def __init__(
         self,
-        model: None,
+        model: str,
         config: PretrainedConfig = None,
         model_save_dir: Optional[Union[str, Path, TemporaryDirectory]] = None,
         preprocessors: Optional[List] = None,
@@ -184,14 +185,16 @@ class DeepSparseBaseModel(OptimizedModel):
         self.config = config
         self.model_save_dir = model_save_dir
 
-        self.model = model
+        self.model = str(model)
+        self.model_path = Path(self.model)
+        self.model_name = self.model_path.name
         self.deepsparse_engine = None
 
         self.input_shapes = parse_shapes(input_shapes)
         self.input_shape_dict = input_shape_dict
         self.output_shape_dict = output_shape_dict
 
-    def _check_is_dynamic(self):
+    def _check_is_dynamic(self) -> bool:
         has_dynamic = False
         if isinstance(self.model, str) and self.model.endswith(".onnx"):
             model = onnx.load(self.model)
@@ -209,13 +212,15 @@ class DeepSparseBaseModel(OptimizedModel):
         cls,
         model_id: Union[str, Path],
         config: PretrainedConfig,
-        use_auth_token: Optional[Union[bool, str, None]] = None,
-        revision: Optional[Union[str, None]] = None,
+        use_auth_token: Optional[Union[bool, str]] = None,
+        revision: Optional[str] = None,
         force_download: bool = False,
         cache_dir: Optional[str] = None,
         file_name: Optional[str] = None,
-        from_onnx: bool = False,
+        subfolder: str = "",
         local_files_only: bool = False,
+        from_onnx: bool = False,
+        model_save_dir: Optional[Union[str, Path, TemporaryDirectory]] = None,
         **kwargs,
     ):
         """
@@ -244,38 +249,83 @@ class DeepSparseBaseModel(OptimizedModel):
             local_files_only(`bool`, *optional*, defaults to `False`):
                 Whether or not to only look at local files (i.e., do not try to download the model).
         """
-        default_file_name = ONNX_WEIGHTS_NAME
-        file_name = file_name or default_file_name
+        model_path = Path(model_id)
+        regular_onnx_filenames = ORTModel._generate_regular_names_for_filename(ONNX_WEIGHTS_NAME)
 
+        if file_name is None:
+            if model_path.is_dir():
+                onnx_files = list(model_path.glob("*.onnx"))
+            else:
+                if isinstance(use_auth_token, bool):
+                    token = HfFolder().get_token()
+                else:
+                    token = use_auth_token
+                repo_files = map(Path, HfApi().list_repo_files(model_id, revision=revision, token=token))
+                pattern = "*.onnx" if subfolder == "" else f"{subfolder}/*.onnx"
+                onnx_files = [p for p in repo_files if p.match(pattern)]
+
+            if len(onnx_files) == 0:
+                raise FileNotFoundError(f"Could not find any ONNX model file in {model_path}")
+            elif len(onnx_files) > 1:
+                raise RuntimeError(
+                    f"Too many ONNX model files were found in {model_path}, specify which one to load by using the "
+                    "file_name argument."
+                )
+            else:
+                file_name = onnx_files[0].name
+
+        if file_name not in regular_onnx_filenames:
+            logger.warning(
+                f"The ONNX file {file_name} is not a regular name used in optimum.onnxruntime, the ORTModel might "
+                "not behave as expected."
+            )
+
+
+        preprocessors = None
         # Load the model from local directory
-        if os.path.isdir(model_id):
-            file_name = os.path.join(model_id, file_name)
-            if os.path.isfile(os.path.join(model_id, ONNX_WEIGHTS_NAME)):
-                file_name = os.path.join(model_id, ONNX_WEIGHTS_NAME)
-
-            model = file_name
-            model_save_dir = model_id
+        if model_path.is_dir():
+            model = model_path / file_name
+            new_model_save_dir = model_id
+            preprocessors = maybe_load_preprocessors(model_id)
         # Download the model from the hub
         else:
-            model_file_names = [file_name]
-            file_names = []
+            model_cache_path = hf_hub_download(
+                repo_id=model_id,
+                filename=file_name,
+                subfolder=subfolder,
+                use_auth_token=use_auth_token,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                local_files_only=local_files_only,
+            )
+
+            # try download external data for >2GB models
             try:
-                for file_name in model_file_names:
-                    model_cache_path = hf_hub_download(
-                        repo_id=model_id,
-                        filename=file_name,
-                        use_auth_token=use_auth_token,
-                        revision=revision,
-                        cache_dir=cache_dir,
-                        force_download=force_download,
-                        local_files_only=local_files_only,
-                    )
-                    file_names.append(model_cache_path)
+                hf_hub_download(
+                    repo_id=model_id,
+                    subfolder=subfolder,
+                    filename=file_name + "_data",
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    local_files_only=local_files_only,
+                )
             except EntryNotFoundError:
-                raise
-            model_save_dir = Path(model_cache_path).parent
-            model = file_names[0]
-        return cls(model, config=config, model_save_dir=model_save_dir, **kwargs)
+                # model doesn't use external data
+                pass
+
+            model = model_cache_path
+            new_model_save_dir = Path(model_cache_path).parent
+            preprocessors = maybe_load_preprocessors(model_id, subfolder=subfolder)
+
+        # model_save_dir can be provided in kwargs as a TemporaryDirectory instance, in which case we want to keep it
+        # instead of the path only.
+        if model_save_dir is None:
+            model_save_dir = new_model_save_dir
+
+        return cls(model, config=config, model_save_dir=model_save_dir, preprocessors=preprocessors, **kwargs)
 
     @classmethod
     def _from_transformers(
@@ -288,6 +338,7 @@ class DeepSparseBaseModel(OptimizedModel):
         cache_dir: Optional[str] = None,
         subfolder: str = "",
         local_files_only: bool = False,
+        trust_remote_code: bool = False,
         task: Optional[str] = None,
         **kwargs,
     ):
@@ -312,46 +363,56 @@ class DeepSparseBaseModel(OptimizedModel):
         if task is None:
             task = cls._auto_model_to_task(cls.auto_model_class)
 
-        model_kwargs = {
-            "revision": revision,
-            "use_auth_token": use_auth_token,
-            "cache_dir": cache_dir,
-            "subfolder": subfolder,
-            "local_files_only": local_files_only,
-            "force_download": force_download,
-        }
-
-        model = TasksManager.get_model_from_task(task, model_id, **model_kwargs)
-
-        model_type = model.config.model_type.replace("_", "-")
-        onnx_config_class = TasksManager.get_exporter_config_constructor(
-            exporter="onnx",
-            model=model,
-            task=task,
-            model_name=model_id,
-            model_type=model_type,
-        )
-
-        onnx_config = onnx_config_class(model.config)
-        save_dir = Path("")
+        save_dir = TemporaryDirectory()
         save_dir_path = Path(save_dir.name)
 
-        # Export the model to the ONNX format
-        export(
-            model=model,
-            config=onnx_config,
-            opset=onnx_config.DEFAULT_ONNX_OPSET,
-            output=save_dir_path / ONNX_WEIGHTS_NAME,
+        main_export(
+            model_name_or_path=model_id,
+            output=save_dir_path,
+            task=task,
+            do_validation=False,
+            no_post_process=True,
+            subfolder=subfolder,
+            revision=revision,
+            cache_dir=cache_dir,
+            use_auth_token=use_auth_token,
+            local_files_only=local_files_only,
+            force_download=force_download,
+            trust_remote_code=trust_remote_code,
         )
 
+        config.save_pretrained(save_dir_path)
+        maybe_save_preprocessors(model_id, save_dir_path, src_subfolder=subfolder)
+
         return cls._from_pretrained(
-            model_id=save_dir_path,
-            config=config,
-            from_onnx=True,
-            use_auth_token=use_auth_token,
-            revision=revision,
+            save_dir_path,
+            config,
+            model_save_dir=save_dir,
+            **kwargs,
+        )
+
+    @classmethod
+    @add_start_docstrings(FROM_PRETRAINED_START_DOCSTRING)
+    def from_pretrained(
+        cls,
+        model_id: Union[str, Path],
+        export: bool = False,
+        force_download: bool = False,
+        use_auth_token: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        subfolder: str = "",
+        config: Optional["PretrainedConfig"] = None,
+        local_files_only: bool = False,
+        **kwargs,
+    ):
+        return super().from_pretrained(
+            model_id,
+            export=export,
             force_download=force_download,
+            use_auth_token=use_auth_token,
             cache_dir=cache_dir,
+            subfolder=subfolder,
+            config=config,
             local_files_only=local_files_only,
             **kwargs,
         )
@@ -395,7 +456,8 @@ class DeepSparseBaseModel(OptimizedModel):
                 "The model provided has dynamic axes in input, please provide `input_shapes` for compilation!"
             )
 
-        static_model_path = str(Path(model_path).parent / ONNX_WEIGHTS_NAME_STATIC)
+        # static_model_path = str(Path(model_path).parent / ONNX_WEIGHTS_NAME_STATIC)
+        static_model_path = model_path
 
         if self.input_shapes:
             self.model = override_onnx_input_shapes(

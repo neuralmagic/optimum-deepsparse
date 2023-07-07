@@ -157,10 +157,6 @@ class DeepSparseModelForImageClassification(DeepSparseModel):
     export_feature = "image-classification"
     auto_model_class = AutoModelForImageClassification
 
-    def __init__(self, model=None, config=None, **kwargs):
-        super().__init__(model, config, **kwargs)
-        self.input_names = ["pixel_values"]
-
     @add_start_docstrings_to_model_forward(
         IMAGE_INPUTS_DOCSTRING.format("batch_size, num_channels, height, width")
         + IMAGE_CLASSIFICATION_EXAMPLE.format(
@@ -252,7 +248,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         + SEQUENCE_CLASSIFICATION_EXAMPLE.format(
             processor_class=_TOKENIZER_FOR_DOC,
             model_class="DeepSparseModelForSequenceClassification",
-            checkpoint="optimum/distilbert-base-uncased-finetuned-sst-2-english",
+            checkpoint="distilbert-base-uncased-finetuned-sst-2-english",
         )
     )
     def forward(
