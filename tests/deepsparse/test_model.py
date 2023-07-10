@@ -1,17 +1,21 @@
-import unittest
 import os
 import shutil
 import tempfile
+import unittest
 
 from huggingface_hub.constants import default_cache_path
-from transformers import (PretrainedConfig,)
-
+from testing_utils import MODEL_DICT
+from transformers import (
+    PretrainedConfig,
+)
 
 import deepsparse
 from optimum.deepsparse import DeepSparseModel, DeepSparseModelForSequenceClassification
-from optimum.onnxruntime import (ONNX_WEIGHTS_NAME,)
+from optimum.onnxruntime import (
+    ONNX_WEIGHTS_NAME,
+)
 from optimum.utils import CONFIG_NAME
-from testing_utils import MODEL_DICT
+
 
 class DeepSparseModelIntegrationTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -43,7 +47,9 @@ class DeepSparseModelIntegrationTest(unittest.TestCase):
         self.assertIsInstance(model.engine, deepsparse.Engine)
         self.assertIsInstance(model.config, PretrainedConfig)
 
-        model = DeepSparseModel.from_pretrained("fxmarty/tiny-bert-sst2-distilled-onnx-subfolder", subfolder="my_subfolder")
+        model = DeepSparseModel.from_pretrained(
+            "fxmarty/tiny-bert-sst2-distilled-onnx-subfolder", subfolder="my_subfolder"
+        )
         model.compile()
         self.assertIsInstance(model.engine, deepsparse.Engine)
         self.assertIsInstance(model.config, PretrainedConfig)
@@ -132,4 +138,3 @@ class DeepSparseModelIntegrationTest(unittest.TestCase):
     #             use_auth_token=os.environ.get("HF_AUTH_TOKEN", None),
     #         )
     #         os.environ.pop("FORCE_ONNX_EXTERNAL_DATA")
-

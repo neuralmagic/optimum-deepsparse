@@ -15,16 +15,12 @@
 import gc
 import unittest
 
-import pytest
 import numpy as np
-import requests
+import pytest
 import torch
 from parameterized import parameterized
-from PIL import Image
+from testing_utils import MODEL_DICT, SEED
 from transformers import (
-    AutoFeatureExtractor,
-    AutoTokenizer,
-    AutoModelForImageClassification,
     AutoModelForSequenceClassification,
     PretrainedConfig,
     pipeline,
@@ -33,14 +29,13 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification
+from optimum.deepsparse import DeepSparseModelForSequenceClassification
 from optimum.utils import (
     logging,
 )
-from testing_utils import MODEL_DICT, SEED
+
 
 logger = logging.get_logger()
-
 
 
 TENSOR_ALIAS_TO_TYPE = {
@@ -70,8 +65,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
         # "xlm_roberta",
     ]
 
-    ARCH_MODEL_MAP = {
-    }
+    ARCH_MODEL_MAP = {}
 
     FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
     MODEL_CLASS = DeepSparseModelForSequenceClassification
@@ -152,7 +146,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
 
     def test_pipeline_zero_shot_classification(self):
         onnx_model = self.MODEL_CLASS.from_pretrained(
-            "typeform/distilbert-base-uncased-mnli", export=True#, input_shapes=DEFAULT_TOKEN_SHAPES
+            "typeform/distilbert-base-uncased-mnli", export=True  # , input_shapes=DEFAULT_TOKEN_SHAPES
         )
         tokenizer = get_preprocessor("typeform/distilbert-base-uncased-mnli")
         # TODO: padding doesn't work

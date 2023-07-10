@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 import shutil
 from pathlib import Path
@@ -9,16 +8,16 @@ from typing import Dict, List, Optional, Tuple, Union
 import onnx
 from huggingface_hub import HfApi, HfFolder, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
-from transformers import AutoModel, AutoConfig, PretrainedConfig
+from transformers import AutoConfig, AutoModel, PretrainedConfig
 from transformers.file_utils import add_start_docstrings
 
 import deepsparse
 from optimum.exporters import TasksManager
 from optimum.exporters.onnx import main_export
-from optimum.modeling_base import OptimizedModel, FROM_PRETRAINED_START_DOCSTRING
+from optimum.modeling_base import FROM_PRETRAINED_START_DOCSTRING, OptimizedModel
+from optimum.onnx.utils import _get_external_data_paths
 from optimum.onnxruntime import ORTModel
 from optimum.onnxruntime.utils import ONNX_WEIGHTS_NAME
-from optimum.onnx.utils import _get_external_data_paths
 from optimum.utils.save_utils import maybe_load_preprocessors, maybe_save_preprocessors
 
 
@@ -296,7 +295,6 @@ class DeepSparseBaseModel(OptimizedModel):
                 f"The ONNX file {file_name} is not a regular name used in optimum.onnxruntime, the ORTModel might "
                 "not behave as expected."
             )
-
 
         preprocessors = None
         # Load the model from local directory
