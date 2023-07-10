@@ -37,55 +37,10 @@ from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparse
 from optimum.utils import (
     logging,
 )
-
-
-SEED = 42
+from testing_utils import MODEL_DICT, SEED
 
 logger = logging.get_logger()
 
-SEQLEN = 128
-DEFAULT_TOKEN_SHAPES = f"[1,{SEQLEN}]"
-DEFAULT_PADDING_KWARGS = {"padding":"max_length",
-    "max_length": SEQLEN,
-    "truncation":True,}
-
-class ModelInfo:
-    def __init__(self, model_id: str, input_shapes: str = None, padding_kwargs: dict = None):
-        self.model_id = model_id
-        self.input_shapes = input_shapes
-        self.padding_kwargs = padding_kwargs
-
-MODEL_DICT = {
-    "albert": ModelInfo("hf-internal-testing/tiny-random-AlbertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "beit": ModelInfo("hf-internal-testing/tiny-random-BeitForImageClassification"),
-    "bert": ModelInfo("hf-internal-testing/tiny-random-BertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "bart": ModelInfo("hf-internal-testing/tiny-random-bart", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "camembert": ModelInfo("hf-internal-testing/tiny-random-camembert", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "convbert": ModelInfo("hf-internal-testing/tiny-random-ConvBertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "deberta": ModelInfo("hf-internal-testing/tiny-random-DebertaModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "deberta_v2": ModelInfo("hf-internal-testing/tiny-random-DebertaV2Model", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "deit": ModelInfo("hf-internal-testing/tiny-random-DeiTModel"),
-    "convnext": ModelInfo("hf-internal-testing/tiny-random-convnext"),
-    "detr": ModelInfo("hf-internal-testing/tiny-random-detr"),
-    "distilbert": ModelInfo("hf-internal-testing/tiny-random-DistilBertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "ibert": ModelInfo("hf-internal-testing/tiny-random-IBertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "mbart": ModelInfo("hf-internal-testing/tiny-random-mbart", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "mobilebert": ModelInfo("hf-internal-testing/tiny-random-MobileBertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "mobilenet_v1": ModelInfo("google/mobilenet_v1_0.75_192", "[1,3,192,192]"),
-    "mobilenet_v2": ModelInfo("hf-internal-testing/tiny-random-MobileNetV2Model", "[1,3,32,32]"),
-    "mobilevit": ModelInfo("hf-internal-testing/tiny-random-mobilevit"),
-    "nystromformer": ModelInfo("hf-internal-testing/tiny-random-NystromformerModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "resnet": ModelInfo("hf-internal-testing/tiny-random-resnet", "[1,3,224,224]"),
-    "roberta": ModelInfo("hf-internal-testing/tiny-random-RobertaModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "roformer": ModelInfo("hf-internal-testing/tiny-random-RoFormerModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "squeezebert": ModelInfo("hf-internal-testing/tiny-random-SqueezeBertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "swin": ModelInfo("hf-internal-testing/tiny-random-SwinModel"),
-    "t5": ModelInfo("hf-internal-testing/tiny-random-t5"),
-    "vit": ModelInfo("hf-internal-testing/tiny-random-vit"),
-    "yolos": ModelInfo("hf-internal-testing/tiny-random-YolosModel"),
-    "xlm": ModelInfo("hf-internal-testing/tiny-random-XLMModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    "xlm_roberta": ModelInfo("hf-internal-testing/tiny-xlm-roberta", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-}
 
 
 TENSOR_ALIAS_TO_TYPE = {
@@ -157,14 +112,8 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
 
             self.assertIn("logits", onnx_outputs)
             self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
-            self.assertIsInstance(onnx_model.deepsparse_engine, deepsparse.Engine)
-            self.assertTrue(onnx_model.deepsparse_engine.fraction_of_supported_ops >= 0.9)
-
-            # compare tensor outputs
-            # print("=====")
-            # print(torch.Tensor(onnx_outputs.logits))
-            # print("-----")
-            # print(transformers_outputs.logits)
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)
             self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
@@ -187,7 +136,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["label"], str)
-        self.assertTrue(onnx_model.deepsparse_engine.fraction_of_supported_ops >= 0.9)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)
 
         gc.collect()
 
@@ -220,4 +169,4 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
         self.assertTrue(all(score > 0.0 for score in outputs["scores"]))
         self.assertTrue(all(isinstance(label, str) for label in outputs["labels"]))
         # TODO: fix padding
-        # self.assertTrue(onnx_model.deepsparse_engine.fraction_of_supported_ops >= 0.9)
+        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)

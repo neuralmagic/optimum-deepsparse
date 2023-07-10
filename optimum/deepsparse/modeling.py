@@ -176,7 +176,7 @@ class DeepSparseModelForImageClassification(DeepSparseModel):
         if use_torch:
             pixel_values = pixel_values.cpu().detach().numpy()
 
-        outputs = self.deepsparse_engine(list(np.expand_dims(pixel_values, axis=0)))
+        outputs = self.engine(list(np.expand_dims(pixel_values, axis=0)))
         logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
 
         # converts output to namedtuple for pipelines post-processing
@@ -271,7 +271,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         if token_type_ids is not None:
             inputs.append(token_type_ids)
 
-        outputs = self.deepsparse_engine(inputs)
+        outputs = self.engine(inputs)
         logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
 
         # converts output to namedtuple for pipelines post-processing
