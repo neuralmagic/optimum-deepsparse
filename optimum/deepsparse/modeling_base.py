@@ -1,20 +1,21 @@
 import logging
-import os
 import re
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Tuple, Union
 
 import onnx
-from huggingface_hub import hf_hub_download
+from huggingface_hub import HfApi, HfFolder, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
-from transformers import AutoModel, AutoConfig, PretrainedConfig
+from transformers import AutoConfig, AutoModel, PretrainedConfig
 from transformers.file_utils import add_start_docstrings
 
 import deepsparse
 from optimum.exporters import TasksManager
 from optimum.exporters.onnx import main_export
-from optimum.modeling_base import OptimizedModel, FROM_PRETRAINED_START_DOCSTRING
+from optimum.modeling_base import FROM_PRETRAINED_START_DOCSTRING, OptimizedModel
+from optimum.onnx.utils import _get_external_data_paths
 from optimum.onnxruntime import ORTModel
 from optimum.onnxruntime.utils import ONNX_WEIGHTS_NAME
 from optimum.utils.save_utils import maybe_load_preprocessors, maybe_save_preprocessors
@@ -188,7 +189,7 @@ class DeepSparseBaseModel(OptimizedModel):
         self.model = str(model)
         self.model_path = Path(self.model)
         self.model_name = self.model_path.name
-        self.deepsparse_engine = None
+        self.engine = None
 
         self.input_shapes = parse_shapes(input_shapes)
         self.input_shape_dict = input_shape_dict
@@ -205,7 +206,22 @@ class DeepSparseBaseModel(OptimizedModel):
         return has_dynamic
 
     def _save_pretrained(self, save_directory: Union[str, Path], file_name: Optional[str] = None, **kwargs):
-        pass
+        """
+        Saves a model and its configuration file to a directory, so that it can be re-loaded using the
+        `from_pretrained` class method. It will always save the file under model_save_dir/latest_model_name.
+
+        Args:
+            save_directory (`Union[str, Path]`):
+                Directory where to save the model file.
+        """
+        src_paths = [self.model_path]
+        dst_paths = [Path(save_directory) / self.model_path.name]
+
+        # add external data paths in case of large models
+        src_paths, dst_paths = _get_external_data_paths(src_paths, dst_paths)
+
+        for src_path, dst_path in zip(src_paths, dst_paths):
+            shutil.copyfile(src_path, dst_path)
 
     @classmethod
     def _from_pretrained(
@@ -279,7 +295,6 @@ class DeepSparseBaseModel(OptimizedModel):
                 f"The ONNX file {file_name} is not a regular name used in optimum.onnxruntime, the ORTModel might "
                 "not behave as expected."
             )
-
 
         preprocessors = None
         # Load the model from local directory
@@ -421,18 +436,18 @@ class DeepSparseBaseModel(OptimizedModel):
         """
         Compiles the model with DeepSparse
         """
-        if self.deepsparse_engine is None:
+        if self.engine is None:
             self.is_dynamic = self._check_is_dynamic()
             if self.is_dynamic:
                 if self.input_shapes is None and (self.input_shape_dict is None or self.output_shape_dict is None):
                     logger.warn("Model is dynamic and has no shapes defined, skipping reshape..")
-                    self.deepsparse_engine = deepsparse.Engine(model=self.model, batch_size=batch_size)
+                    self.engine = deepsparse.Engine(model=self.model, batch_size=batch_size)
                     return
                 self._reshape(self.model)
 
             logger.info("Compiling...")
-            self.deepsparse_engine = deepsparse.Engine(model=self.model, batch_size=batch_size)
-            logger.info(self.deepsparse_engine)
+            self.engine = deepsparse.Engine(model=self.model, batch_size=batch_size)
+            logger.info(self.engine)
 
     def _reshape(
         self,
@@ -446,7 +461,7 @@ class DeepSparseBaseModel(OptimizedModel):
                 Path to the model.
         """
         # Reset the engine so we know to recompile
-        self.deepsparse_engine = None
+        self.engine = None
 
         if not isinstance(model_path, str) or not model_path.endswith(".onnx"):
             raise ValueError("The model_path isn't a path to an ONNX '{model_path}'")
