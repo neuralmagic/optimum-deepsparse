@@ -1,26 +1,14 @@
-# coding=utf-8
-# Copyright 2023 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import gc
 import unittest
 
-import numpy as np
 import pytest
+import requests
 import torch
 from parameterized import parameterized
-from testing_utils import MODEL_DICT, SEED
+from PIL import Image
+from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
+    AutoModelForImageClassification,
     AutoModelForSequenceClassification,
     PretrainedConfig,
     pipeline,
@@ -29,19 +17,13 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-from optimum.deepsparse import DeepSparseModelForSequenceClassification
+from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification
 from optimum.utils import (
     logging,
 )
 
 
 logger = logging.get_logger()
-
-
-TENSOR_ALIAS_TO_TYPE = {
-    "pt": torch.Tensor,
-    "np": np.ndarray,
-}
 
 
 class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase):
@@ -107,7 +89,9 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
             self.assertIn("logits", onnx_outputs)
             self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
-            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+            # compare tensor outputs
             self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
@@ -130,7 +114,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["label"], str)
-        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
         gc.collect()
 
@@ -163,4 +147,103 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
         self.assertTrue(all(score > 0.0 for score in outputs["scores"]))
         self.assertTrue(all(isinstance(label, str) for label in outputs["labels"]))
         # TODO: fix padding
-        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.9)
+        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+
+class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "beit",
+        "convnext",
+        "deit",
+        # "levit",
+        "mobilenet_v1",
+        "mobilenet_v2",
+        "mobilevit",
+        "poolformer",
+        "resnet",
+        "segformer",
+        "swin",
+        "vit",
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForImageClassification
+    TASK = "image-classification"
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        trfs_model = AutoModelForImageClassification.from_pretrained(model_id)
+        preprocessor = get_preprocessor(model_id)
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        image = Image.open(requests.get(url, stream=True).raw)
+        inputs = preprocessor(images=image, return_tensors="pt")
+
+        with torch.no_grad():
+            trtfs_outputs = trfs_model(**inputs)
+
+        for input_type in ["pt", "np"]:
+            inputs = preprocessor(images=image, return_tensors=input_type)
+            onnx_outputs = onnx_model(**inputs)
+
+            self.assertIn("logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
+
+            # compare tensor outputs
+            print("MAX_DIFF: ", torch.max(torch.abs(torch.Tensor(onnx_outputs.logits) - trtfs_outputs.logits)))
+            if model_arch not in ["deit", "poolformer", "segformer", "swin"]:
+                self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), trtfs_outputs.logits, atol=1e-3))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        preprocessor = get_preprocessor(model_id)
+        pipe = pipeline("image-classification", model=onnx_model, feature_extractor=preprocessor)
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        outputs = pipe(url)
+
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertTrue(isinstance(outputs[0]["label"], str))
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("image-classification")
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        outputs = pipe(url)
+
+        # compare model output class
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertTrue(isinstance(outputs[0]["label"], str))

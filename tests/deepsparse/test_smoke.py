@@ -15,11 +15,11 @@
 import gc
 import unittest
 
-import numpy as np
 import requests
 import torch
 from parameterized import parameterized
 from PIL import Image
+from testing_utils import SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
     AutoFeatureExtractor,
     AutoModelForImageClassification,
@@ -34,9 +34,8 @@ from optimum.utils import (
 )
 
 
-SEED = 42
-
 logger = logging.get_logger()
+
 
 MODEL_DICT = {
     "mobilenet_v1": [
@@ -57,12 +56,6 @@ MODEL_DICT = {
         {"pixel_values": [1, 3, 224, 224]},
         {"logits": [1, 1000]},
     ],
-}
-
-
-TENSOR_ALIAS_TO_TYPE = {
-    "pt": torch.Tensor,
-    "np": np.ndarray,
 }
 
 
