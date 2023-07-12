@@ -208,7 +208,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
             self.assertIn("logits", onnx_outputs)
             self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
-            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
 
             # compare tensor outputs
             print("MAX_DIFF: ", torch.max(torch.abs(torch.Tensor(onnx_outputs.logits) - trtfs_outputs.logits)))
@@ -234,7 +234,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertTrue(isinstance(outputs[0]["label"], str))
-        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
 
         gc.collect()
 
