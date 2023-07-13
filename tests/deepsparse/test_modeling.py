@@ -272,6 +272,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
     ]
 
     ARCH_MODEL_MAP = {}
+    SEQLEN = 128
 
     FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
     MODEL_CLASS = DeepSparseModelForTokenClassification
