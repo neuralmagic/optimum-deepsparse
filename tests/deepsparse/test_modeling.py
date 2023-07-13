@@ -364,3 +364,4 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertGreaterEqual(outputs["score"], 0.0)
         self.assertIsInstance(outputs["answer"], str)
+        
