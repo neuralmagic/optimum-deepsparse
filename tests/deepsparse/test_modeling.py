@@ -30,6 +30,7 @@ from optimum.deepsparse import (
     DeepSparseModelForMaskedLM,
     DeepSparseModelForMultipleChoice,
     DeepSparseModelForSequenceClassification,
+    DeepSparseModelForQuestionAnswering,
 )
 from optimum.utils import (
     logging,
@@ -261,7 +262,6 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertTrue(isinstance(outputs[0]["label"], str))
 
-
 class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "audio_spectrogram_transformer",
@@ -472,7 +472,6 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-
         onnx_model = self.MODEL_CLASS.from_pretrained(
             model_id,
             export=True,
@@ -506,7 +505,6 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertIsInstance(outputs[0]["token_str"], str)
 
 
-<<<<<<< HEAD
 class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -583,8 +581,6 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
         gc.collect()
 
 
-=======
->>>>>>> update modeling.py
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -683,9 +679,121 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         text = "My Name is Derrick and i live in Nairobi."
         outputs = pipe(text)
 
-        # compare model output class
+        # Compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
 
 
-if __name__ == "__main__":
-    unittest.main()
+class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "albert",
+        # "bart",
+        "bert",
+        # "big_bird",
+        # "bigbird_pegasus",
+        "camembert",
+        "convbert",
+        # "data2vec_text",
+        "deberta",
+        "deberta_v2",
+        "distilbert",
+        # "electra",
+        # "flaubert",
+        # "gptj",
+        # "ibert",
+        # TODO: these two should be supported, but require image inputs not supported in ORTModel
+        # "layoutlm"
+        # "layoutlmv3",
+        # "mbart",
+        "mobilebert",
+        "nystromformer",
+        "roberta",
+        "roformer",
+        "squeezebert",
+        # "xlm",
+        # "xlm_roberta",
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForQuestionAnswering
+    TASK = "question-answering"
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
+        # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        transformers_model = AutoModelForQuestionAnswering.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        tokens = tokenizer("This is a sample output", return_tensors="pt", **padding_kwargs)
+        with torch.no_grad():
+            transformers_outputs = transformers_model(**tokens)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer("This is a sample output", return_tensors=input_type, **padding_kwargs)
+            onnx_outputs = onnx_model(**tokens)
+
+            self.assertIn("start_logits", onnx_outputs)
+            self.assertIn("end_logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.start_logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_outputs.end_logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+            # compare tensor outputs
+            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.start_logits, atol=1e-1))
+            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.end_logits), transformers_outputs.end_logits, atol=1e-1))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline("question-answering", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
+        question = "What is DeepSparse?"
+        context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
+        outputs = pipe(question = question, context = context)
+
+        self.assertGreaterEqual(outputs["score"], 0.0)
+        self.assertIsInstance(outputs["answer"], str)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("question-answering")
+        question = "What is DeepSparse?"
+        context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
+        outputs = pipe(question = question, context = context)
+
+        # compare model output class
+        self.assertGreaterEqual(outputs["score"], 0.0)
+        self.assertIsInstance(outputs["answer"], str)
