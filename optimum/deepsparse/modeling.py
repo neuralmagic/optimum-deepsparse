@@ -11,12 +11,14 @@ from transformers import (
     AutoModel,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     SequenceClassifierOutput,
+    TokenClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -276,3 +278,83 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
+
+
+TOKEN_CLASSIFICATION_EXAMPLE = r"""
+    Example of token classification:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.deepsparse import {model_class}
+    >>> import torch
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("We are flying from Texas to California", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    >>> list(logits.shape)
+    [1, 2]
+    ```
+
+    Example using `transformers.pipelines`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> nm_classifier = pipeline("token-classification", model=model, tokenizer=tokenizer)
+
+    >>> text = "We are flying from Texas to California"
+    >>> pred = nm_classifier(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a token classification head on top (a linear layer on top of the
+    pooled output)
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForTokenClassification(DeepSparseModel):
+    auto_model_class = AutoModelForTokenClassification
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + TOKEN_CLASSIFICATION_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForTokenClassification",
+            checkpoint="distilbert-base-uncased",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return TokenClassifierOutput(logits=logits)
