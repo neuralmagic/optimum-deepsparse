@@ -10,6 +10,7 @@ from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     PretrainedConfig,
     pipeline,
     set_seed,
@@ -17,7 +18,7 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification
+from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification, DeepSparseModelForTokenClassification
 from optimum.utils import (
     logging,
 )
@@ -247,3 +248,106 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertTrue(isinstance(outputs[0]["label"], str))
+        
+
+class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "albert",
+        # "bart",
+        "bert",
+        "camembert",
+        "convbert",
+        "deberta",
+        "deberta_v2",
+        "distilbert",
+        # "ibert",
+        # "mbart",
+        "mobilebert",
+        "nystromformer",
+        "roberta",
+        "roformer",
+        # "squeezebert",
+        # "xlm",
+        # "xlm_roberta",
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForTokenClassification
+    TASK = "token-classification"
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
+        # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        transformers_model = AutoModelForTokenClassification.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        text = "This is a sample output"
+        tokens = tokenizer(text, return_tensors="pt", **padding_kwargs)
+        with torch.no_grad():
+            transformers_outputs = transformers_model(**tokens)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer(text, return_tensors=input_type, **padding_kwargs)
+            onnx_outputs = onnx_model(**tokens)
+
+            self.assertIn("logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+            # compare tensor outputs
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
+        text = "Norway is beautiful and has great hotels."
+        outputs = pipe(text)
+
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertIsInstance(outputs[0]["label"], str)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("token-classification")
+        text = "Norway is beautiful and has great hotels."
+        outputs = pipe(text)
+
+        # compare model output class
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertIsInstance(outputs[0]["label"], str)
