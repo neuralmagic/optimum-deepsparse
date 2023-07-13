@@ -291,7 +291,6 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
         input_shapes = model_info.input_shapes
-        padding_kwargs = model_info.padding_kwargs
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
 
@@ -302,12 +301,12 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
-        tokens = tokenizer(text, return_tensors="pt", **padding_kwargs)
+        tokens = tokenizer(text, return_tensors="pt")
         with torch.no_grad():
             transformers_outputs = transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
-            tokens = tokenizer(text, return_tensors=input_type, **padding_kwargs)
+            tokens = tokenizer(text, return_tensors=input_type)
             onnx_outputs = onnx_model(**tokens)
 
             self.assertIn("logits", onnx_outputs)
@@ -328,11 +327,10 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
         input_shapes = model_info.input_shapes
-        padding_kwargs = model_info.padding_kwargs
 
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
         tokenizer = get_preprocessor(model_id)
-        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
         text = "Norway is beautiful and has great hotels."
         outputs = pipe(text)
 

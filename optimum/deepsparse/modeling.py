@@ -280,7 +280,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         return SequenceClassifierOutput(logits=logits)
 
 
-TOEKEN_CLASSIFICATION_EXAMPLE = r"""
+TOKEN_CLASSIFICATION_EXAMPLE = r"""
     Example of token classification:
 
     ```python
@@ -327,7 +327,7 @@ class DeepSparseModelForTokenClassification(DeepSparseModel):
 
     @add_start_docstrings_to_model_forward(
         TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
-        + TOEKEN_CLASSIFICATION_EXAMPLE.format(
+        + TOKEN_CLASSIFICATION_EXAMPLE.format(
             processor_class=_TOKENIZER_FOR_DOC,
             model_class="DeepSparseModelForTokenClassification",
             checkpoint="distilbert-base-uncased",
@@ -358,3 +358,4 @@ class DeepSparseModelForTokenClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return TokenClassifierOutput(logits=logits)
+
