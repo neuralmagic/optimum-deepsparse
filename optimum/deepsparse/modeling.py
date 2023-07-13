@@ -280,6 +280,25 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         return SequenceClassifierOutput(logits=logits)
 
 QUESTION_ANSWERING_EXAMPLE = r"""
+    Example of question answering:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.deepsparse import {model_class}
+    >>> import torch
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> question = "What is DeepSparse?"
+    >>> context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
+    >>> inputs = tokenizer(question, context, return_tensors="np")
+    
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    >>> list(logits.shape)
+    ```
+
     Example using `transformers.pipelines`:
 
     ```python
@@ -288,10 +307,13 @@ QUESTION_ANSWERING_EXAMPLE = r"""
 
     >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
     >>> model = {model_class}.from_pretrained("{checkpoint}")
+
     >>> question = "What is DeepSparse?"
     >>> context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
+
     >>> qa = pipeline("text-classification", model=model, tokenizer=tokenizer)
-    >>> pred = qa(question = question, context = context)
+   
+     >>> pred = qa(question = question, context = context)
     ```
 """
 

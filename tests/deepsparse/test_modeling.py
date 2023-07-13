@@ -299,13 +299,14 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         transformers_model = AutoModelForSequenceClassification.from_pretrained(model_id)
         tokenizer = get_preprocessor(model_id)
 
-        text = "This is a sample output"
-        tokens = tokenizer(text, return_tensors="pt", **padding_kwargs)
+        question = "What is DeepSparse?"
+        context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
+        tokens = tokenizer(question, context, return_tensors="pt", **padding_kwargs)
         with torch.no_grad():
             transformers_outputs = transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
-            tokens = tokenizer(text, return_tensors=input_type, **padding_kwargs)
+            tokens = tokenizer(question, context, return_tensors=input_type, **padding_kwargs)
             onnx_outputs = onnx_model(**tokens)
 
             self.assertIn("logits", onnx_outputs)
