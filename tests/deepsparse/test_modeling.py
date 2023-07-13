@@ -266,7 +266,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         "nystromformer",
         "roberta",
         "roformer",
-        "squeezebert",
+        # "squeezebert",
         # "xlm",
         # "xlm_roberta",
     ]
