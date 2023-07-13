@@ -335,7 +335,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         outputs = pipe(text)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
-        self.assertIsInstance(outputs[0]["label"], str)
+        self.assertIsInstance(outputs[0]["word"], str)
         self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
         gc.collect()
@@ -348,4 +348,4 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         # compare model output class
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
-        self.assertIsInstance(outputs[0]["label"], str)
+        self.assertIsInstance(outputs[0]["word"], str)
