@@ -290,8 +290,10 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
 
         self.assertIsInstance(onnx_model.config, PretrainedConfig)
 
@@ -300,7 +302,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
-        tokens = tokenizer(text, return_tensors="pt")
+        tokens = tokenizer(text, return_tensors="pt", **padding_kwarg)
         with torch.no_grad():
             transformers_outputs = transformers_model(**tokens)
 
@@ -311,10 +313,10 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
             self.assertIn("logits", onnx_outputs)
             self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
-            # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
             # compare tensor outputs
-            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
 
@@ -325,16 +327,18 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+        padding_kwargs = model_info.padding_kwargs
 
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
         tokenizer = get_preprocessor(model_id)
-        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
         text = "Norway is beautiful and has great hotels."
         outputs = pipe(text)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["word"], str)
-        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
         gc.collect()
 
