@@ -332,7 +332,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
         tokenizer = get_preprocessor(model_id)
-        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
         text = "Norway is beautiful and has great hotels."
         outputs = pipe(text)
 
