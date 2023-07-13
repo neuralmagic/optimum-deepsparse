@@ -266,9 +266,9 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         "nystromformer",
         "roberta",
         "roformer",
-        # "squeezebert",
+        "squeezebert",
         # "xlm",
-        # "xlm_roberta",
+        "xlm_roberta",
     ]
 
     ARCH_MODEL_MAP = {}

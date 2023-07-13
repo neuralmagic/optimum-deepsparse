@@ -327,7 +327,7 @@ class DeepSparseModelForTokenClassification(DeepSparseModel):
 
     @add_start_docstrings_to_model_forward(
         TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
-        + SEQUENCE_CLASSIFICATION_EXAMPLE.format(
+        + TOEKEN_CLASSIFICATION_EXAMPLE.format(
             processor_class=_TOKENIZER_FOR_DOC,
             model_class="DeepSparseModelForTokenClassification",
             checkpoint="distilbert-base-uncased",
