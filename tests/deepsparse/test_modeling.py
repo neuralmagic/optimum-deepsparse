@@ -20,7 +20,6 @@ from transformers import (
     PretrainedConfig,
     pipeline,
     set_seed,
-    AutoTokenizer,
 )
 from transformers.onnx.utils import get_preprocessor
 
@@ -736,7 +735,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         set_seed(SEED)
         transformers_model = AutoModelForTokenClassification.from_pretrained(model_id)
-        tokenizer = AutoTokenizer.from_pretrained(model_id, padding_kwargs)
+        tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
         tokens = tokenizer(text, return_tensors="pt")
