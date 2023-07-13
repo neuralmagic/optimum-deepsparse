@@ -738,7 +738,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
-        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": SEQLEN, "truncation": True,}
+        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": 128, "truncation": True,}
         tokens = tokenizer(text, return_tensors="pt", **DEFAULT_PADDING_KWARGS)
         with torch.no_grad():
             transformers_model(**tokens)
@@ -764,7 +764,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": SEQLEN, "truncation": True,}
+        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": 128, "truncation": True,}
 
         onnx_model = self.MODEL_CLASS.from_pretrained(
             model_id,
