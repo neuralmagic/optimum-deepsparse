@@ -348,6 +348,3 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["word"], str)
 
-
-if __name__ == '__main__':
-    unittest.main()
