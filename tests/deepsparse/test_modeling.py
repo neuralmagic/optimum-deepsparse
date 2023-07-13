@@ -302,7 +302,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
-        tokens = tokenizer(text, return_tensors="pt", **padding_kwarg)
+        tokens = tokenizer(text, return_tensors="pt", **padding_kwargs)
         with torch.no_grad():
             transformers_outputs = transformers_model(**tokens)
 
