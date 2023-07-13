@@ -290,7 +290,6 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        input_shapes = model_info.input_shapes
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
 
@@ -326,7 +325,6 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        input_shapes = model_info.input_shapes
 
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
         tokenizer = get_preprocessor(model_id)
