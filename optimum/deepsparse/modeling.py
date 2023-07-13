@@ -356,7 +356,8 @@ class DeepSparseModelForQuestionAnswering(DeepSparseModel):
             inputs.append(token_type_ids)
 
         outputs = self.engine(inputs)
-        logits = torch.from_numpy(outputs) if use_torch else outputs
+        start_logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+        end_logits = torch.from_numpy(outputs[1]) if use_torch else outputs[1]
 
         # converts output to namedtuple for pipelines post-processing
-        return QuestionAnsweringModelOutput(start_logits=logits[0],end_logits=logits[1])
+        return QuestionAnsweringModelOutput(start_logits=start_logits,end_logits=end_logits)
