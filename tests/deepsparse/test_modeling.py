@@ -251,22 +251,31 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
 class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
-        # "bart",
+        "bart",
         "bert",
+        # "big_bird",
+        # "bigbird_pegasus",
         "camembert",
         "convbert",
-        # "deberta",
-        # "deberta_v2",
+        "data2vec_text",
+        "deberta",
+        "deberta_v2",
         "distilbert",
-        # "ibert",
-        # "mbart",
+        "electra",
+        "flaubert",
+        "gptj",
+        "ibert",
+        # TODO: these two should be supported, but require image inputs not supported in ORTModel
+        # "layoutlm"
+        # "layoutlmv3",
+        "mbart",
         "mobilebert",
         "nystromformer",
         "roberta",
         "roformer",
-        # "squeezebert",
-        # "xlm",
-        # "xlm_roberta",
+        "squeezebert",
+        "xlm",
+        "xlm_roberta",
     ]
 
     ARCH_MODEL_MAP = {}
@@ -309,13 +318,16 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
             tokens = tokenizer(question, context, return_tensors=input_type, **padding_kwargs)
             onnx_outputs = onnx_model(**tokens)
 
-            self.assertIn("logits", onnx_outputs)
-            self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIn("start_logits", onnx_outputs)
+            self.assertIn("end_logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.start_logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_outputs.end_logits, TENSOR_ALIAS_TO_TYPE[input_type])
             self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
             self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
             # compare tensor outputs
-            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.end_logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.end_logits, atol=1e-1))
 
         gc.collect()
 
@@ -336,8 +348,8 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
         outputs = pipe(question = question, context = context)
 
-        self.assertGreaterEqual(outputs[0]["score"], 0.0)
-        self.assertIsInstance(outputs[0]["label"], str)
+        self.assertGreaterEqual(outputs["score"], 0.0)
+        self.assertIsInstance(outputs["answer"], str)
         self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
         gc.collect()
@@ -350,6 +362,5 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         outputs = pipe(question = question, context = context)
 
         # compare model output class
-        self.assertGreaterEqual(outputs[0]["score"], 0.0)
-        self.assertIsInstance(outputs[0]["label"], str)
-
+        self.assertGreaterEqual(outputs["score"], 0.0)
+        self.assertIsInstance(outputs["label"], str)
