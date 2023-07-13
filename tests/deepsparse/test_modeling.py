@@ -16,6 +16,7 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModelForMultipleChoice,
     AutoModelForSequenceClassification,
+    AutoModelForQuestionAnswering,
     PretrainedConfig,
     pipeline,
     set_seed,
