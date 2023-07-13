@@ -292,7 +292,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         model_id = model_info.model_id
         input_shapes = model_info.input_shapes
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
 
         self.assertIsInstance(onnx_model.config, PretrainedConfig)
 
@@ -328,7 +328,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         model_id = model_info.model_id
         input_shapes = model_info.input_shapes
 
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
         tokenizer = get_preprocessor(model_id)
         pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
         text = "Norway is beautiful and has great hotels."
