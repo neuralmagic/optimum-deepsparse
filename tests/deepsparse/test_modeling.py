@@ -14,6 +14,7 @@ from transformers import (
     PretrainedConfig,
     pipeline,
     set_seed,
+    AutoTokenizer,
 )
 from transformers.onnx.utils import get_preprocessor
 
@@ -299,7 +300,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         set_seed(SEED)
         transformers_model = AutoModelForTokenClassification.from_pretrained(model_id)
-        tokenizer = get_preprocessor(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, padding_kwargs)
 
         text = "This is a sample output"
         tokens = tokenizer(text, return_tensors="pt", **padding_kwargs)
@@ -331,7 +332,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         padding_kwargs = model_info.padding_kwargs
 
         onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True)
-        tokenizer = get_preprocessor(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, padding_kwargs)
         pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
         text = "Norway is beautiful and has great hotels."
         outputs = pipe(text)
