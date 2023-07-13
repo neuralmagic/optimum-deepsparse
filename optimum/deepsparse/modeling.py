@@ -359,4 +359,4 @@ class DeepSparseModelForQuestionAnswering(DeepSparseModel):
         logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
 
         # converts output to namedtuple for pipelines post-processing
-        return QuestionAnsweringModelOutput(logits=logits)
+        return QuestionAnsweringModelOutput(start_logits=logits[0],end_logits=logits[1])
