@@ -738,21 +738,22 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         tokenizer = get_preprocessor(model_id)
 
         text = "This is a sample output"
-        tokens = tokenizer(text, return_tensors="pt")
+        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": SEQLEN, "truncation": True,}
+        tokens = tokenizer(text, return_tensors="pt", **DEFAULT_PADDING_KWARGS)
         with torch.no_grad():
             transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
-            tokens = tokenizer(text, return_tensors=input_type)
+            tokens = tokenizer(text, return_tensors=input_type,**DEFAULT_PADDING_KWARGS)
             onnx_outputs = onnx_model(**tokens)
 
             self.assertIn("logits", onnx_outputs)
             self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
             self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
-            # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
             # compare tensor outputs
-            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
 
@@ -763,6 +764,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
+        DEFAULT_PADDING_KWARGS = {"padding": "max_length", "max_length": SEQLEN, "truncation": True,}
 
         onnx_model = self.MODEL_CLASS.from_pretrained(
             model_id,
@@ -770,7 +772,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
             # input_shapes=input_shapes
         )
         tokenizer = get_preprocessor(model_id)
-        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer, **DEFAULT_PADDING_KWARGS)
         text = "Norway is beautiful and has great hotels."
         outputs = pipe(text)
 
