@@ -13,7 +13,7 @@ TENSOR_ALIAS_TO_TYPE = {
     "np": np.ndarray,
 }
 
-SEQLEN = 128
+SEQLEN = 384
 DEFAULT_TOKEN_SHAPES = f"[1,{SEQLEN}]"
 DEFAULT_PADDING_KWARGS = {
     "padding": "max_length",
