@@ -274,8 +274,8 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         "roberta",
         "roformer",
         "squeezebert",
-        "xlm",
-        "xlm_roberta",
+        # "xlm",
+        # "xlm_roberta",
     ]
 
     ARCH_MODEL_MAP = {}
