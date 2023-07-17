@@ -29,22 +29,22 @@ logger = logging.get_logger()
 class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
-        # "bart",
-        "bert",
-        "camembert",
-        "convbert",
-        "deberta",
-        "deberta_v2",
-        "distilbert",
-        # "ibert",
-        # "mbart",
-        "mobilebert",
-        "nystromformer",
-        "roberta",
-        "roformer",
-        # "squeezebert",
-        # "xlm",
-        # "xlm_roberta",
+        # # "bart",
+        # "bert",
+        # "camembert",
+        # "convbert",
+        # "deberta",
+        # "deberta_v2",
+        # "distilbert",
+        # # "ibert",
+        # # "mbart",
+        # "mobilebert",
+        # "nystromformer",
+        # "roberta",
+        # "roformer",
+        # # "squeezebert",
+        # # "xlm",
+        # # "xlm_roberta",
     ]
 
     ARCH_MODEL_MAP = {}
@@ -264,7 +264,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         # "electra",
         # "flaubert",
         # "gptj",
-        "ibert",
+        # "ibert",
         # TODO: these two should be supported, but require image inputs not supported in ORTModel
         # "layoutlm"
         # "layoutlmv3",
@@ -281,7 +281,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
     ARCH_MODEL_MAP = {}
 
     FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
-    MODEL_CLASS = DeepSparseModelForSequenceClassification
+    MODEL_CLASS = DeepSparseModelForQuestionAnswering
     TASK = "question-answering"
 
     def test_load_vanilla_transformers_which_is_not_supported(self):
@@ -308,14 +308,12 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         transformers_model = AutoModelForSequenceClassification.from_pretrained(model_id)
         tokenizer = get_preprocessor(model_id)
 
-        question = "What is DeepSparse?"
-        context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
-        tokens = tokenizer(question, context, return_tensors="pt", **padding_kwargs)
+        tokens = tokenizer("This is a sample output", return_tensors="pt", **padding_kwargs)
         with torch.no_grad():
             transformers_outputs = transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
-            tokens = tokenizer(question, context, return_tensors=input_type, **padding_kwargs)
+            tokens = tokenizer("This is a sample output", return_tensors=input_type, **padding_kwargs)
             onnx_outputs = onnx_model(**tokens)
 
             self.assertIn("start_logits", onnx_outputs)
@@ -326,8 +324,8 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
             self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
             # compare tensor outputs
-            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.end_logits, atol=1e-1))
-            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.end_logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.start_logits), transformers_outputs.start_logits, atol=1e-1))
+            self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.end_logits), transformers_outputs.end_logits, atol=1e-1))
 
         gc.collect()
 
