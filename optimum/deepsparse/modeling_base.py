@@ -355,6 +355,7 @@ class DeepSparseBaseModel(OptimizedModel):
         local_files_only: bool = False,
         trust_remote_code: bool = False,
         task: Optional[str] = None,
+        custom_onnx_configs: Optional[Dict[str, "OnnxConfig"]] = None,
         **kwargs,
     ):
         """
@@ -372,6 +373,8 @@ class DeepSparseBaseModel(OptimizedModel):
                 Is needed to load models from a private repository
             revision (`str`):
                 Revision is the specific model version to use. It can be a branch name, a tag name, or a commit id
+            custom_onnx_configs (`Optional[Dict[str, OnnxConfig]]`, defaults to `None`):
+                Experimental usage: override the default ONNX config used for the given model. This argument may be useful for advanced users that desire a finer-grained control on the export. An example is available [here](https://huggingface.co/docs/optimum/main/en/exporters/onnx/usage_guides/export_a_model).
             kwargs (`Dict`, *optional*):
                 kwargs will be passed to the model during initialization
         """
@@ -394,6 +397,7 @@ class DeepSparseBaseModel(OptimizedModel):
             local_files_only=local_files_only,
             force_download=force_download,
             trust_remote_code=trust_remote_code,
+            custom_onnx_configs=custom_onnx_configs,
         )
 
         config.save_pretrained(save_dir_path)
