@@ -10,6 +10,7 @@ from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForQuestionAnswering,
     PretrainedConfig,
     pipeline,
     set_seed,
@@ -305,7 +306,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         self.assertIsInstance(onnx_model.config, PretrainedConfig)
 
         set_seed(SEED)
-        transformers_model = AutoModelForSequenceClassification.from_pretrained(model_id)
+        transformers_model = AutoModelForQuestionAnswering.from_pretrained(model_id)
         tokenizer = get_preprocessor(model_id)
 
         tokens = tokenizer("This is a sample output", return_tensors="pt", **padding_kwargs)
