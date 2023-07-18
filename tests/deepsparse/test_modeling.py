@@ -304,13 +304,17 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
         set_seed(SEED)
         transformers_model = AutoModelForAudioClassification.from_pretrained(model_id)
         processor = AutoFeatureExtractor.from_pretrained(model_id)
-        input_values = processor(self._generate_random_audio_data(), return_tensors="pt")
+        input_values = processor(self._generate_random_audio_data(), return_tensors="pt",
+                                #  **padding_kwargs
+                                 )
 
         with torch.no_grad():
             transformers_outputs = transformers_model(**input_values)
 
         for input_type in ["pt", "np"]:
-            input_values = processor(self._generate_random_audio_data(), return_tensors=input_type)
+            input_values = processor(self._generate_random_audio_data(), return_tensors=input_type,
+                                    #   **padding_kwargs
+                                      )
             onnx_outputs = onnx_model(**input_values)
 
             self.assertTrue("logits" in onnx_outputs)
@@ -339,7 +343,9 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
                                                       )
         data = self._generate_random_audio_data()
         processor = AutoFeatureExtractor.from_pretrained(model_id)
-        pipe = pipeline("audio-classification", model=onnx_model, feature_extractor=processor, sampling_rate=220)
+        pipe = pipeline("audio-classification", model=onnx_model, feature_extractor=processor, sampling_rate=220,
+                        # **padding_kwargs
+                        )
         outputs = pipe(data)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
