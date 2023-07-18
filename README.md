@@ -2,6 +2,8 @@
 
 Accelerated inference of 🤗 models on CPUs using the [DeepSparse Inference Runtime](https://github.com/neuralmagic/deepsparse).
 
+[![DeepSparse Modeling / Python - Test](https://github.com/neuralmagic/optimum-deepsparse/actions/workflows/test_check.yaml/badge.svg)](https://github.com/neuralmagic/optimum-deepsparse/actions/workflows/test_check.yaml)
+
 ## Install
 Optimum DeepSparse is a fast-moving project, and you may want to install from source.
 
