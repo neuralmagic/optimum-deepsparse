@@ -11,6 +11,7 @@ from transformers import (
     AutoModel,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForAudioClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
@@ -249,6 +250,69 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
             processor_class=_TOKENIZER_FOR_DOC,
             model_class="DeepSparseModelForSequenceClassification",
             checkpoint="distilbert-base-uncased-finetuned-sst-2-english",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return SequenceClassifierOutput(logits=logits)
+
+AUDIO_CLASSIFICATION_EXAMPLE = r"""
+    Example using `transformers.pipelines`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+     >>> from datasets import load_dataset, Audio
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> audio_classifier = pipeline("audio-classification", model=model, tokenizer=tokenizer)
+  
+    >>> dataset = load_dataset("PolyAI/minds14", name="en-US", split="train")
+    >>> dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+    >>> sampling_rate = dataset.features["audio"].sampling_rate
+    >>> audio_file = dataset[0]["audio"]["path"]
+    >>> pred = audio_classifier(audio_file)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a audio classification
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForAudioClassification(DeepSparseModel):
+    auto_model_class = AutoModelForAudioClassification
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + AUDIO_CLASSIFICATION_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForAudioClassification",
+            checkpoint="optimum/hubert-base-superb-ks",
         )
     )
     def forward(
