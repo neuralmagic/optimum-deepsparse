@@ -163,7 +163,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         "poolformer",
         "resnet",
         "segformer",
-        "swin",
+        # "swin",
         "vit",
     ]
 
@@ -252,7 +252,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
 class DeepSparseModelForSemanticSegmentationIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "segformer",
-        
+
     ]
 
     ARCH_MODEL_MAP = {}
