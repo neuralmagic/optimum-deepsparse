@@ -12,12 +12,14 @@ from transformers import (
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForMaskedLM,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     SequenceClassifierOutput,
+    MaskedLMOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -335,3 +337,73 @@ class DeepSparseModelForAudioClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
+
+MASKEDLM_EXAMPLE = r"""
+    Example of feature extraction:
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+    >>> import torch
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="np")
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    >>> list(logits.shape)
+    [1, 8, 28996]
+    ```
+    Example using `transformers.pipeline`:
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> fill_masker = pipeline("fill-mask", model=model, tokenizer=tokenizer)
+    >>> text = "The capital of France is [MASK]."
+    >>> pr
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model for MaskedLM
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForMaskedLM(DeepSparseModel):
+    auto_model_class = AutoModelForMaskedLM
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + MASKEDLM_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForMaskedLM",
+            checkpoint="optimum/bert-base-uncased-for-fill-mask",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return MaskedLMOutput(logits=logits)
