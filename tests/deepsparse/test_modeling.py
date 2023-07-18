@@ -472,7 +472,6 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-
         onnx_model = self.MODEL_CLASS.from_pretrained(
             model_id,
             export=True,
@@ -506,7 +505,6 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertIsInstance(outputs[0]["token_str"], str)
 
 
-<<<<<<< HEAD
 class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -583,8 +581,6 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
         gc.collect()
 
 
-=======
->>>>>>> update modeling.py
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -674,6 +670,18 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
         # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+        input_shapes = model_info.input_shapes
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        preprocessor = get_preprocessor(model_id)
+        pipe = pipeline("image-segmentation", model=onnx_model, feature_extractor=preprocessor)
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        outputs = pipe(url)
+
+        self.assertTrue(isinstance(outputs[0]["label"], str))
+        self.assertTrue(outputs[0]["mask"] is not None)
+        self.assertTrue(isinstance(outputs[0]["mask"], Image.Image))
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
 
         gc.collect()
 
