@@ -23,7 +23,7 @@ Now whenever you change the code, you'll be able to run with those changes insta
 
 
 ## How to use it?
-To load a model and run inference with DeepSparse, you can just replace your `AutoModelForXxx` class with the corresponding `DeepSParseModelForXxx` class. 
+To load a model and run inference with DeepSparse, you can just replace your `AutoModelForXxx` class with the corresponding `DeepSparseModelForXxx` class. 
 
 ```diff
 import requests
@@ -38,10 +38,18 @@ image = Image.open(requests.get(url, stream=True).raw)
 
 model_id = "microsoft/resnet-50"
 - model = AutoModelForImageClassification.from_pretrained(model_id)
-+ model = DeepSparseModelForImageClassification.from_pretrained(model_id, export=True, input_shape_dict={"pixel_values": [1, 3, 224, 224]}, output_shape_dict={"logits": [1, 1000]},)
++ model = DeepSparseModelForImageClassification.from_pretrained(model_id, export=True, input_shapes="[1,3,224,224]")
 feature_extractor = AutoFeatureExtractor.from_pretrained(model_id)
 cls_pipe = pipeline("image-classification", model=model, feature_extractor=feature_extractor)
 outputs = cls_pipe(image)
 ```
+
+| Supported Task                              | Model Class |
+| ------------------------------------------- | ------------- |
+| "image-classification"                      | DeepSparseModelForImageClassification  |
+| "text-classification"/"sentiment-analysis"  | DeepSparseModelForSequenceClassification  |
+| "audio-classification"                      | DeepSparseModelForAudioClassification  |
+| "question-answering"                        | DeepSparseModelForQuestionAnswering  |
+| "image-segmentation"                        | DeepSparseModelForSemanticSegmentation  |
 
 If you find any issue while using those, please open an issue or a pull request.

@@ -162,7 +162,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         "poolformer",
         "resnet",
         "segformer",
-        "swin",
+        # "swin", TODO(mgoin): Fix in nightly
         "vit",
     ]
 
