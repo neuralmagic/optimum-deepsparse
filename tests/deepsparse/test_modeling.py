@@ -21,15 +21,12 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-<<<<<<< HEAD
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
     DeepSparseModelForImageClassification,
     DeepSparseModelForSequenceClassification,
+    DeepSparseModelForMaskedLM,
 )
-=======
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification,DeepSparseModelForMaskedLM
->>>>>>> cbe7d0b (MaskedLM)
 from optimum.utils import (
     logging,
 )
@@ -496,4 +493,9 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
 
         # compare model output class
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
+<<<<<<< HEAD
         self.assertIsInstance(outputs[0]["token_str"], str)
+=======
+        self.assertIsInstance(outputs[0]["token_str"], str)
+
+>>>>>>> 67be08b (tests update)
