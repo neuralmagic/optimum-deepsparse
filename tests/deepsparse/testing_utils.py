@@ -77,7 +77,7 @@ MODEL_DICT = {
     "yolos": ModelInfo("hf-internal-testing/tiny-random-YolosModel", "[1,3,30,30]"),
     "xlm": ModelInfo("hf-internal-testing/tiny-random-XLMModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
     "xlm_roberta": ModelInfo("hf-internal-testing/tiny-xlm-roberta", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
-    #audio models
+    # audio models
     "audio_spectrogram_transformer": ModelInfo("Ericwang/tiny-random-ast", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
     "data2vec_audio": ModelInfo("Ericwang/tiny-random-ast", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
     "hubert": ModelInfo("hf-internal-testing/tiny-random-HubertModel", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),

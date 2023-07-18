@@ -1,0 +1,49 @@
+{
+  "_name_or_path": "hf-internal-testing/tiny-random-SwinModel",
+  "architectures": [
+    "SwinModel"
+  ],
+  "attention_probs_dropout_prob": 0.0,
+  "depths": [
+    1,
+    2,
+    1
+  ],
+  "drop_path_rate": 0.1,
+  "embed_dim": 16,
+  "encoder_stride": 8,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.0,
+  "hidden_size": 64,
+  "image_size": 32,
+  "initializer_range": 0.02,
+  "layer_norm_eps": 1e-05,
+  "mlp_ratio": 2.0,
+  "model_type": "swin",
+  "num_channels": 3,
+  "num_heads": [
+    2,
+    2,
+    4
+  ],
+  "num_layers": 3,
+  "out_features": [
+    "stage3"
+  ],
+  "out_indices": [
+    3
+  ],
+  "patch_size": 2,
+  "path_norm": true,
+  "qkv_bias": true,
+  "stage_names": [
+    "stem",
+    "stage1",
+    "stage2",
+    "stage3"
+  ],
+  "torch_dtype": "float32",
+  "transformers_version": "4.30.2",
+  "use_absolute_embeddings": false,
+  "window_size": 2
+}

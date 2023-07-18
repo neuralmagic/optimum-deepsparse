@@ -285,9 +285,9 @@ AUDIO_CLASSIFICATION_EXAMPLE = r"""
     >>> from transformers import {processor_class}, pipeline
     >>> from optimum.deepsparse import {model_class}
      >>> from datasets import load_dataset, Audio
-    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> processor = {processor_class}.from_pretrained("{checkpoint}")
     >>> model = {model_class}.from_pretrained("{checkpoint}")
-    >>> audio_classifier = pipeline("audio-classification", model=model, tokenizer=tokenizer)
+    >>> audio_classifier = pipeline("audio-classification", model=model, feature_extractor=processor)
   
     >>> dataset = load_dataset("PolyAI/minds14", name="en-US", split="train")
     >>> dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
@@ -310,30 +310,24 @@ class DeepSparseModelForAudioClassification(DeepSparseModel):
     @add_start_docstrings_to_model_forward(
         TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
         + AUDIO_CLASSIFICATION_EXAMPLE.format(
-            processor_class=_TOKENIZER_FOR_DOC,
+            processor_class=_FEATURE_EXTRACTOR_FOR_DOC,
             model_class="DeepSparseModelForAudioClassification",
             checkpoint="optimum/hubert-base-superb-ks",
         )
     )
     def forward(
         self,
-        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        input_values: Optional[Union[torch.Tensor, np.ndarray]] = None,
         attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
-        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
         **kwargs,
     ):
         self.compile()
 
-        use_torch = isinstance(input_ids, torch.Tensor)
+        use_torch = isinstance(input_values, torch.Tensor)
         if use_torch:
-            input_ids = input_ids.cpu().detach().numpy()
-            attention_mask = attention_mask.cpu().detach().numpy()
-            if token_type_ids is not None:
-                token_type_ids = token_type_ids.cpu().detach().numpy()
+            input_values = input_values.cpu().detach().numpy()
 
-        inputs = [input_ids, attention_mask]
-        if token_type_ids is not None:
-            inputs.append(token_type_ids)
+        inputs = [input_values]
 
         outputs = self.engine(inputs)
         logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
