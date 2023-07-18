@@ -1,26 +1,30 @@
 import gc
 import unittest
 
+import numpy as np
 import pytest
 import requests
 import torch
-import numpy as np
 from parameterized import parameterized
 from PIL import Image
 from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
+    AutoFeatureExtractor,
+    AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
-    AutoModelForAudioClassification,
     PretrainedConfig,
-    AutoFeatureExtractor,
     pipeline,
     set_seed,
 )
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification,DeepSparseModelForAudioClassification
+from optimum.deepsparse import (
+    DeepSparseModelForAudioClassification,
+    DeepSparseModelForImageClassification,
+    DeepSparseModelForSequenceClassification,
+)
 from optimum.utils import (
     logging,
 )
@@ -165,7 +169,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         "poolformer",
         "resnet",
         "segformer",
-        # "swin",
+        # "swin", TODO(mgoin): Fix in nightly
         "vit",
     ]
 
@@ -292,29 +296,33 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        input_shapes = model_info.input_shapes
-        padding_kwargs = model_info.padding_kwargs
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True,
-                                                    #    input_shapes=input_shapes
-                                                       )
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            #    input_shapes=input_shapes
+        )
 
         self.assertIsInstance(onnx_model.config, PretrainedConfig)
 
         set_seed(SEED)
         transformers_model = AutoModelForAudioClassification.from_pretrained(model_id)
         processor = AutoFeatureExtractor.from_pretrained(model_id)
-        input_values = processor(self._generate_random_audio_data(), return_tensors="pt",
-                                #  **padding_kwargs
-                                 )
+        input_values = processor(
+            self._generate_random_audio_data(),
+            return_tensors="pt",
+            #  **padding_kwargs
+        )
 
         with torch.no_grad():
-            transformers_outputs = transformers_model(**input_values)
+            transformers_model(**input_values)
 
         for input_type in ["pt", "np"]:
-            input_values = processor(self._generate_random_audio_data(), return_tensors=input_type,
-                                    #   **padding_kwargs
-                                      )
+            input_values = processor(
+                self._generate_random_audio_data(),
+                return_tensors=input_type,
+                #   **padding_kwargs
+            )
             onnx_outputs = onnx_model(**input_values)
 
             self.assertTrue("logits" in onnx_outputs)
@@ -335,22 +343,26 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        input_shapes = model_info.input_shapes
-        padding_kwargs = model_info.padding_kwargs
 
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, 
-                                                    #   input_shapes=input_shapes
-                                                      )
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            #   input_shapes=input_shapes
+        )
         data = self._generate_random_audio_data()
         processor = AutoFeatureExtractor.from_pretrained(model_id)
-        pipe = pipeline("audio-classification", model=onnx_model, feature_extractor=processor, sampling_rate=220,
-                        # **padding_kwargs
-                        )
+        pipe = pipeline(
+            "audio-classification",
+            model=onnx_model,
+            feature_extractor=processor,
+            sampling_rate=220,
+            # **padding_kwargs
+        )
         outputs = pipe(data)
 
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["label"], str)
-    #     # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
 
         gc.collect()
 
@@ -363,4 +375,3 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["label"], str)
-

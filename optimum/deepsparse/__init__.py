@@ -30,9 +30,9 @@ _import_structure = {
 if TYPE_CHECKING:
     from .modeling import (
         DeepSparseModel,
+        DeepSparseModelForAudioClassification,
         DeepSparseModelForImageClassification,
         DeepSparseModelForSequenceClassification,
-        DeepSparseModelForAudioClassification,
     )
 else:
     import sys

@@ -9,9 +9,9 @@ from datasets import Dataset
 from transformers import (
     AutoConfig,
     AutoModel,
+    AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
-    AutoModelForAudioClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
@@ -278,6 +278,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
 
+
 AUDIO_CLASSIFICATION_EXAMPLE = r"""
     Example using `transformers.pipelines`:
 
@@ -288,7 +289,7 @@ AUDIO_CLASSIFICATION_EXAMPLE = r"""
     >>> processor = {processor_class}.from_pretrained("{checkpoint}")
     >>> model = {model_class}.from_pretrained("{checkpoint}")
     >>> audio_classifier = pipeline("audio-classification", model=model, feature_extractor=processor)
-  
+
     >>> dataset = load_dataset("PolyAI/minds14", name="en-US", split="train")
     >>> dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
     >>> sampling_rate = dataset.features["audio"].sampling_rate
