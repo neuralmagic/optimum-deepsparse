@@ -11,15 +11,15 @@ from transformers import (
     AutoModel,
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
-    AutoModelForSequenceClassification,
     AutoModelForMaskedLM,
+    AutoModelForSequenceClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
-    SequenceClassifierOutput,
     MaskedLMOutput,
+    SequenceClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -337,6 +337,7 @@ class DeepSparseModelForAudioClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
+
 
 MASKEDLM_EXAMPLE = r"""
     Example of feature extraction:
