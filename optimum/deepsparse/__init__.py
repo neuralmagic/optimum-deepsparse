@@ -22,6 +22,7 @@ _import_structure = {
         "DeepSparseModel",
         "DeepSparseModelForSequenceClassification",
         "DeepSparseModelForImageClassification",
+        "DeepSparseModelForMultipleChoice",
     ],
 }
 
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
         DeepSparseModel,
         DeepSparseModelForImageClassification,
         DeepSparseModelForSequenceClassification,
+        DeepSparseModelForMultipleChoice,
     )
 else:
     import sys
