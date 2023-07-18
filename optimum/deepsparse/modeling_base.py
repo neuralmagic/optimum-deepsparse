@@ -13,7 +13,7 @@ from transformers.file_utils import add_start_docstrings
 
 import deepsparse
 from optimum.exporters import TasksManager
-from optimum.exporters.onnx import main_export
+from optimum.exporters.onnx import OnnxConfig, main_export
 from optimum.modeling_base import FROM_PRETRAINED_START_DOCSTRING, OptimizedModel
 from optimum.onnx.utils import _get_external_data_paths
 from optimum.onnxruntime import ORTModel
@@ -355,7 +355,7 @@ class DeepSparseBaseModel(OptimizedModel):
         local_files_only: bool = False,
         trust_remote_code: bool = False,
         task: Optional[str] = None,
-        custom_onnx_configs: Optional[Dict[str, "OnnxConfig"]] = None,
+        custom_onnx_configs: Optional[Dict[str, OnnxConfig]] = None,
         **kwargs,
     ):
         """
