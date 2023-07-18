@@ -15,9 +15,10 @@ INSTALL_REQUIRE = [
     "deepsparse-nightly",  # TODO: move to stable release
     "optimum[exporters]>=1.8.0",
     "pydantic>=1.8.2,<2.0.0",
+    "torchaudio==2.0.2"
 ]
 
-TESTS_REQUIRE = ["pytest", "parameterized", "Pillow", "evaluate", "diffusers", "py-cpuinfo"]
+TESTS_REQUIRE = ["pytest", "parameterized", "Pillow", "evaluate", "diffusers", "py-cpuinfo","torchaudio"]
 
 QUALITY_REQUIRE = ["black~=23.1", "ruff>=0.0.241,<=0.0.259"]
 
