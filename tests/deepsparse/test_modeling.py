@@ -693,3 +693,5 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
 
         # compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
+
+        
