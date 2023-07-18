@@ -11,12 +11,14 @@ from transformers import (
     AutoModel,
     AutoModelForImageClassification,
     AutoModelForSequenceClassification,
+    AutoModelForSemanticSegmentation,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     SequenceClassifierOutput,
+    SemanticSegmenterOutput
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -276,3 +278,54 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
+
+
+SEMANTIC_SEGMENTATION_EXAMPLE = r"""
+    Example of semantic segmentation using `transformers.pipelines`:
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+
+    >>> preprocessor = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}", export=True, input_shape_dict="dict('pixel_values': [1, 3, 224, 224])", output_shape_dict="dict("logits": [1, 1000])",)
+    >>> pipe = pipeline("semantic-segmentation", model=model, feature_extractor=preprocessor)
+    >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+    >>> outputs = pipe(url)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a SemanticSegmenterOutput for semantic segmentation tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForSemanticSegmentation(DeepSparseModel):
+    export_feature = "semantic-segmentation"
+    auto_model_class = AutoModelForSemanticSegmentation
+
+    @add_start_docstrings_to_model_forward(
+        IMAGE_INPUTS_DOCSTRING.format("batch_size, num_channels, height, width")
+        + SEMANTIC_SEGMENTATION_EXAMPLE.format(
+            processor_class=_FEATURE_EXTRACTOR_FOR_DOC,
+            model_class="DeepSparseModelForSemanticSegmentation",
+            checkpoint="nvidia/segformer-b0-finetuned-ade-512-512",
+        )
+    )
+    def forward(
+        self,
+        pixel_values: Union[torch.Tensor, np.ndarray],
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(pixel_values, torch.Tensor)
+        if use_torch:
+            pixel_values = pixel_values.cpu().detach().numpy()
+
+        outputs = self.engine(list(np.expand_dims(pixel_values, axis=0)))
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return SemanticSegmenterOutput(logits=logits)

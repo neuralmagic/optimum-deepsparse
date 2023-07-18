@@ -335,6 +335,3 @@ class DeepSparseModelForSemanticSegmentationIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertTrue(isinstance(outputs[0]["label"], str))
         self.assertTrue(isinstance(outputs[0]["mask"], Image.Image))
-
-if __name__ == '__main__':
-    unittest.main()
