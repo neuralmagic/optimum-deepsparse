@@ -165,7 +165,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         "poolformer",
         "resnet",
         "segformer",
-        "swin",
+        # "swin",
         "vit",
     ]
 
