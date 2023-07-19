@@ -26,6 +26,7 @@ from optimum.deepsparse import (
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForSequenceClassification,
+    DeepSparseModelForCustomTasks,
 )
 from optimum.utils import (
     logging,
@@ -500,3 +501,47 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["token_str"], str)
+
+class DeepSparseModelForCustomTasksMIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+       "sbert"
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForCustomTasks
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_model_call(self, model_arch):
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        model = self.MODEL_CLASS.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer("This is a sample output", return_tensors=input_type)
+            outputs = model(**tokens)
+            self.assertIsInstance(outputs.pooler_output, self.TENSOR_ALIAS_TO_TYPE[input_type])
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_ort_model(self, model_arch):
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline("feature-extraction", model=onnx_model, tokenizer=tokenizer)
+        text = "My Name is Philipp and i live in Germany."
+        outputs = pipe(text)
+
+        # compare model output class
+        self.assertTrue(any(any(isinstance(item, float) for item in row) for row in outputs[0]))
+
+
+

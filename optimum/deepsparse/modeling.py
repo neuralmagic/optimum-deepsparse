@@ -20,6 +20,7 @@ from transformers.modeling_outputs import (
     ImageClassifierOutput,
     MaskedLMOutput,
     SequenceClassifierOutput,
+    ModelOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -408,3 +409,87 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return MaskedLMOutput(logits=logits)
+
+CUSTOM_TASKS_EXAMPLE = r"""
+    Example of custom tasks(e.g. a sentence transformers taking `pooler_output` as output):
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("I love burritos!", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> last_hidden_state = outputs.last_hidden_state
+    >>> pooler_output = outputs.pooler_output
+    ```
+
+    Example using `transformers.pipelines`(only if the task is supported):
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> onnx_extractor = pipeline("feature-extraction", model=model, tokenizer=tokenizer)
+
+    >>> text = "I love burritos!"
+    >>> pred = onnx_extractor(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model for for any custom tasks
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForCustomTasks(DeepSparseModel):
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + CUSTOM_TASKS_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForCustomTasks",
+            checkpoint="optimum/sbert-all-MiniLM-L6-with-pooler",
+        )
+    )
+    
+    def forward(self,**kwargs):
+        self.compile()
+
+        use_torch = isinstance(next(iter(kwargs.values())), torch.Tensor)
+        # converts pytorch inputs into numpy inputs for onnx
+        onnx_inputs = self._prepare_onnx_inputs(use_torch=use_torch, **kwargs)
+        inputs = [onnx_inputs]
+        onnx_outputs = self.engine(inputs)
+        outputs = self._prepare_onnx_outputs(onnx_outputs, use_torch=use_torch)
+
+        # converts output to namedtuple for pipelines post-processing
+        return ModelOutput(outputs)
+    
+    def _prepare_onnx_inputs(self, use_torch: bool, **kwargs):
+        onnx_inputs = {}
+        # converts pytorch inputs into numpy inputs for onnx
+        for input in self.inputs_names.keys():
+            onnx_inputs[input] = kwargs.pop(input)
+
+            if use_torch:
+                onnx_inputs[input] = onnx_inputs[input].cpu().detach().numpy()
+
+        return onnx_inputs
+    
+    def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
+        outputs = {}
+        # converts onnxruntime outputs into tensor for standard outputs
+        for output, idx in self.output_names.items():
+            outputs[output] = onnx_outputs[idx]
+
+            if use_torch:
+                outputs[output] = torch.from_numpy(outputs[output]).to(self.device)
+
+        return outputs
