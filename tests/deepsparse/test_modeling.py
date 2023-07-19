@@ -23,10 +23,10 @@ from transformers.onnx.utils import get_preprocessor
 import deepsparse
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
+    DeepSparseModelForCustomTasks,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForSequenceClassification,
-    DeepSparseModelForCustomTasks,
 )
 from optimum.utils import (
     logging,
@@ -502,10 +502,9 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["token_str"], str)
 
+
 class DeepSparseModelForCustomTasksMIntegrationTest(unittest.TestCase):
-    SUPPORTED_ARCHITECTURES = [
-       "sbert"
-    ]
+    SUPPORTED_ARCHITECTURES = ["sbert"]
 
     ARCH_MODEL_MAP = {}
 
@@ -542,6 +541,3 @@ class DeepSparseModelForCustomTasksMIntegrationTest(unittest.TestCase):
 
         # compare model output class
         self.assertTrue(any(any(isinstance(item, float) for item in row) for row in outputs[0]))
-
-
-

@@ -33,10 +33,10 @@ if TYPE_CHECKING:
     from .modeling import (
         DeepSparseModel,
         DeepSparseModelForAudioClassification,
+        DeepSparseModelForCustomTasks,
         DeepSparseModelForImageClassification,
         DeepSparseModelForMaskedLM,
         DeepSparseModelForSequenceClassification,
-        DeepSparseModelForCustomTasks,
     )
 else:
     import sys

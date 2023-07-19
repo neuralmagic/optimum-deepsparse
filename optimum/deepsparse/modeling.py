@@ -19,8 +19,8 @@ from transformers.file_utils import add_start_docstrings, add_start_docstrings_t
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     MaskedLMOutput,
-    SequenceClassifierOutput,
     ModelOutput,
+    SequenceClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -410,6 +410,7 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return MaskedLMOutput(logits=logits)
 
+
 CUSTOM_TASKS_EXAMPLE = r"""
     Example of custom tasks(e.g. a sentence transformers taking `pooler_output` as output):
 
@@ -458,8 +459,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
             checkpoint="optimum/sbert-all-MiniLM-L6-with-pooler",
         )
     )
-    
-    def forward(self,**kwargs):
+    def forward(self, **kwargs):
         self.compile()
 
         use_torch = isinstance(next(iter(kwargs.values())), torch.Tensor)
@@ -471,7 +471,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return ModelOutput(outputs)
-    
+
     def _prepare_onnx_inputs(self, use_torch: bool, **kwargs):
         onnx_inputs = {}
         # converts pytorch inputs into numpy inputs for onnx
@@ -482,11 +482,11 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
                 onnx_inputs[input] = onnx_inputs[input].cpu().detach().numpy()
 
         return onnx_inputs
-    
+
     def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
         outputs = {}
         # converts onnxruntime outputs into tensor for standard outputs
-        for output, idx in self.engine.output_names :
+        for output, idx in self.engine.output_names:
             outputs[output] = onnx_outputs[idx]
 
             if use_torch:
