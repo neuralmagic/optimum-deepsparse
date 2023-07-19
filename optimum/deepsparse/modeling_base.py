@@ -195,6 +195,9 @@ class DeepSparseBaseModel(OptimizedModel):
         self.input_shape_dict = input_shape_dict
         self.output_shape_dict = output_shape_dict
 
+        self.inputs_names = {input_key.name: idx for idx, input_key in enumerate(model.get_inputs())}
+        self.output_names = {output_key.name: idx for idx, output_key in enumerate(model.get_outputs())}
+
     def _check_is_dynamic(self) -> bool:
         has_dynamic = False
         if isinstance(self.model, str) and self.model.endswith(".onnx"):
