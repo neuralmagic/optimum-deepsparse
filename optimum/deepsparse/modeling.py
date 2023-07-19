@@ -451,8 +451,6 @@ FEATURE_EXTRACTION_EXAMPLE = r"""
     MODEL_START_DOCSTRING,
 )
 class DeepSparseModelForFeatureExtraction(DeepSparseModel):
-    auto_model_class = AutoModelForMaskedLM
-
     @add_start_docstrings_to_model_forward(
         TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
         + FEATURE_EXTRACTION_EXAMPLE.format(
