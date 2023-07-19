@@ -475,7 +475,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
     def _prepare_onnx_inputs(self, use_torch: bool, **kwargs):
         onnx_inputs = {}
         # converts pytorch inputs into numpy inputs for onnx
-        for input in self.inputs_names.keys():
+        for input in self.engine.input_names:
             onnx_inputs[input] = kwargs.pop(input)
 
             if use_torch:
@@ -486,7 +486,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
     def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
         outputs = {}
         # converts onnxruntime outputs into tensor for standard outputs
-        for output, idx in self.output_names.items():
+        for output, idx in self.engine.output_names :
             outputs[output] = onnx_outputs[idx]
 
             if use_torch:
