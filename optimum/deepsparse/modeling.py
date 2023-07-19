@@ -426,7 +426,7 @@ MULTIPLE_CHOICE_EXAMPLE = r"""
     >>> first_sentence = ["Members of the procession walk down the street holding small horn brass instruments."] * num_choices
     >>> second_sentence = [
     ...     "A drum line passes by walking down the street playing their instruments.",
-    ...     "A drum line has heard approaching them.",
+    ...     "A drum line has heard approaching the city.",
     ...     "A drum line arrives and they're outside dancing and asleep.",
     ...     "A drum line turns the lead singer watches the performance."
     ... ]
