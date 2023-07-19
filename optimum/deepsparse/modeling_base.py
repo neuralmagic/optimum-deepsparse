@@ -186,7 +186,7 @@ class DeepSparseBaseModel(OptimizedModel):
         self.config = config
         self.model_save_dir = model_save_dir
 
-        self.model = model
+        self.model = str(model)
         self.model_path = Path(self.model)
         self.model_name = self.model_path.name
         self.engine = None
@@ -194,9 +194,6 @@ class DeepSparseBaseModel(OptimizedModel):
         self.input_shapes = parse_shapes(input_shapes)
         self.input_shape_dict = input_shape_dict
         self.output_shape_dict = output_shape_dict
-
-        self.inputs_names = {input_key.name: idx for idx, input_key in enumerate(model.get_inputs())}
-        self.output_names = {output_key.name: idx for idx, output_key in enumerate(model.get_outputs())}
 
     def _check_is_dynamic(self) -> bool:
         has_dynamic = False
