@@ -10,12 +10,12 @@ from PIL import Image
 from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
     AutoFeatureExtractor,
+    AutoModel,
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
     PretrainedConfig,
-    AutoModel,
     pipeline,
     set_seed,
 )
@@ -24,10 +24,10 @@ from transformers.onnx.utils import get_preprocessor
 import deepsparse
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
+    DeepSparseModelForFeatureExtraction,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForSequenceClassification,
-    DeepSparseModelForFeatureExtraction,
 )
 from optimum.utils import (
     logging,
@@ -503,16 +503,17 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["token_str"], str)
 
+
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
-        "albert", 
+        "albert",
         "bert",
         "camembert",
-        "distilbert", 
+        "distilbert",
         # "electra",
         "roberta",
         # "xlm_roberta"
-              ]
+    ]
 
     ARCH_MODEL_MAP = {}
 
@@ -603,3 +604,7 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
 
         # compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
+
+
+if __name__ == "__main__":
+    unittest.main()

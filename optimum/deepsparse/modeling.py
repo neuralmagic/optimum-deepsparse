@@ -17,10 +17,10 @@ from transformers import (
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
+    BaseModelOutput,
     ImageClassifierOutput,
     MaskedLMOutput,
     SequenceClassifierOutput,
-    BaseModelOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -410,6 +410,7 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return MaskedLMOutput(logits=logits)
 
+
 FEATURE_EXTRACTION_EXAMPLE = r"""
     Example of feature extraction:
 
@@ -444,6 +445,7 @@ FEATURE_EXTRACTION_EXAMPLE = r"""
     ```
 """
 
+
 @add_start_docstrings(
     """
     DeepSparse Model with BaseModelOutput for feature-extraction tasks.
@@ -475,10 +477,9 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
                 attention_mask = np.ones_like(input_ids)
             else:
                 attention_mask = attention_mask.cpu().detach().numpy()
-                
-        if token_type_ids is not None:
-            token_type_ids = token_type_ids.cpu().detach().numpy()
-        
+
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
 
         inputs = [input_ids, attention_mask]
         if token_type_ids is not None:
