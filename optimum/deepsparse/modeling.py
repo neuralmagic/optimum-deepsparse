@@ -564,5 +564,6 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
 
         outputs = self.engine(inputs)
         last_hidden_state = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
         # converts output to namedtuple for pipelines post-processing
         return BaseModelOutput(last_hidden_state=last_hidden_state)
