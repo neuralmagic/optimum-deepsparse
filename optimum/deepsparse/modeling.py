@@ -12,16 +12,16 @@ from transformers import (
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
-    AutoModelForSequenceClassification,
     AutoModelForMultipleChoice,
+    AutoModelForSequenceClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     MaskedLMOutput,
-    SequenceClassifierOutput,
     MultipleChoiceModelOutput,
+    SequenceClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -411,6 +411,7 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return MaskedLMOutput(logits=logits)
 
+
 MULTIPLE_CHOICE_EXAMPLE = r"""
     Example of mutliple choice:
 
@@ -439,6 +440,7 @@ MULTIPLE_CHOICE_EXAMPLE = r"""
     >>> logits = outputs.logits
     ```
 """
+
 
 @add_start_docstrings(
     """

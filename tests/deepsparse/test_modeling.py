@@ -13,8 +13,8 @@ from transformers import (
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
-    AutoModelForSequenceClassification,
     AutoModelForMultipleChoice,
+    AutoModelForSequenceClassification,
     PretrainedConfig,
     pipeline,
     set_seed,
@@ -26,8 +26,8 @@ from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
-    DeepSparseModelForSequenceClassification,
     DeepSparseModelForMultipleChoice,
+    DeepSparseModelForSequenceClassification,
 )
 from optimum.utils import (
     logging,
@@ -503,6 +503,7 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["token_str"], str)
 
+
 class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -543,12 +544,12 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
 
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        input_shapes = model_info.input_shapes
-        padding_kwargs = model_info.padding_kwargs
         # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
-        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, 
-                                                    #   input_shapes=input_shapes
-                                                      )
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            #   input_shapes=input_shapes
+        )
 
         self.assertIsInstance(onnx_model.config, PretrainedConfig)
 
@@ -560,16 +561,14 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
         first_sentence = ["The sky is blue due to the shorter wavelength of blue light."] * num_choices
         start = "The color of the sky is"
         second_sentence = [start + "blue", start + "green", start + "red", start + "yellow"]
-        inputs = tokenizer(first_sentence, second_sentence, 
-                            truncation=True, padding=True
-                            )
-         # Unflatten the tokenized inputs values expanding it to the shape [batch_size, num_choices, seq_length]
+        inputs = tokenizer(first_sentence, second_sentence, truncation=True, padding=True)
+        # Unflatten the tokenized inputs values expanding it to the shape [batch_size, num_choices, seq_length]
         for k, v in inputs.items():
             inputs[k] = [v[i : i + num_choices] for i in range(0, len(v), num_choices)]
 
         pt_inputs = dict(inputs.convert_to_tensors(tensor_type="pt"))
         with torch.no_grad():
-            transformers_outputs = transformers_model(**pt_inputs)
+            transformers_model(**pt_inputs)
 
         for input_type in ["pt", "np"]:
             inps = dict(inputs.convert_to_tensors(tensor_type=input_type))
@@ -585,5 +584,3 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
             # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
-
-    

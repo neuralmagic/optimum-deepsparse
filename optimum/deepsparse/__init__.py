@@ -35,8 +35,8 @@ if TYPE_CHECKING:
         DeepSparseModelForAudioClassification,
         DeepSparseModelForImageClassification,
         DeepSparseModelForMaskedLM,
-        DeepSparseModelForSequenceClassification,
         DeepSparseModelForMultipleChoice,
+        DeepSparseModelForSequenceClassification,
     )
 else:
     import sys
