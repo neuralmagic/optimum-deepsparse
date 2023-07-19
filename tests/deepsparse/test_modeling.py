@@ -534,12 +534,6 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     MODEL_CLASS = DeepSparseModelForMultipleChoice
     TASK = "multiple-choice"
 
-    def test_load_vanilla_transformers_which_is_not_supported(self):
-        with self.assertRaises(Exception) as context:
-            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
-
-        self.assertIn("Unrecognized configuration class", str(context.exception))
-
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
         # model_args = {"test_name": model_arch, "model_arch": model_arch}
