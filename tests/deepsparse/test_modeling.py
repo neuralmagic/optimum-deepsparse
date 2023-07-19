@@ -25,12 +25,12 @@ from transformers.onnx.utils import get_preprocessor
 import deepsparse
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
+    DeepSparseModelForCustomTasks,
     DeepSparseModelForFeatureExtraction,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForMultipleChoice,
     DeepSparseModelForSequenceClassification,
-    DeepSparseModelForCustomTasks,
 )
 from optimum.utils import (
     logging,
@@ -506,6 +506,7 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertIsInstance(outputs[0]["token_str"], str)
 
+
 class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -586,6 +587,7 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
             # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
+
 
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
@@ -687,6 +689,7 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
 
         # Compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
+
 
 class DeepSparseModelForCustomTasksMIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = ["sbert"]

@@ -96,7 +96,7 @@ MODEL_DICT = {
     "wav2vec2-conformer": ModelInfo(
         "hf-internal-testing/tiny-random-wav2vec2-conformer", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS
     ),
-    #custom tasks
+    # custom tasks
     "sbert": "optimum/sbert-all-MiniLM-L6-with-pooler",
 }
 

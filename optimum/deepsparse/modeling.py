@@ -21,9 +21,9 @@ from transformers.modeling_outputs import (
     BaseModelOutput,
     ImageClassifierOutput,
     MaskedLMOutput,
+    ModelOutput,
     MultipleChoiceModelOutput,
     SequenceClassifierOutput,
-    ModelOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -487,7 +487,8 @@ class DeepSparseModelForMultipleChoice(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return MultipleChoiceModelOutput(logits=logits)
-    
+
+
 FEATURE_EXTRACTION_EXAMPLE = r"""
     Example of feature extraction with DeepSparse:
 
@@ -567,7 +568,8 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return BaseModelOutput(last_hidden_state=last_hidden_state)
-    
+
+
 CUSTOM_TASKS_EXAMPLE = r"""
     Example of custom tasks(e.g. a sentence transformers taking `pooler_output` as output):
 
@@ -646,7 +648,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
     def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
         outputs = {}
         # converts onnxruntime outputs into tensor for standard outputs
-        for idx, output in enumerate(self.engine.output_names):
+        for output, idx in self.engine.output_names:
             outputs[output] = onnx_outputs[idx]
             if use_torch:
                 outputs[output] = torch.from_numpy(outputs[output])
