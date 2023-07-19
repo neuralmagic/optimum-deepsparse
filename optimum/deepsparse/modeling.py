@@ -648,7 +648,7 @@ class DeepSparseModelForCustomTasks(DeepSparseModel):
     def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
         outputs = {}
         # converts onnxruntime outputs into tensor for standard outputs
-        for output, idx in self.engine.output_names:
+        for idx, output in enumerate(self.engine.output_names):
             outputs[output] = onnx_outputs[idx]
             if use_torch:
                 outputs[output] = torch.from_numpy(outputs[output])
