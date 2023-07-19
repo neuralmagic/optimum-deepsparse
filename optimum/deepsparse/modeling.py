@@ -412,7 +412,7 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
 
 
 FEATURE_EXTRACTION_EXAMPLE = r"""
-    Example of feature extraction:
+    Example of feature extraction with DeepSparse:
 
     ```python
     >>> from transformers import {processor_class}
