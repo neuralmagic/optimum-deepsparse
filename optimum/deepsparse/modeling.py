@@ -12,6 +12,7 @@ from transformers import (
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
+    AutoModelForMultipleChoice,
     AutoModelForSequenceClassification,
     EvalPrediction,
 )
@@ -19,6 +20,7 @@ from transformers.file_utils import add_start_docstrings, add_start_docstrings_t
 from transformers.modeling_outputs import (
     ImageClassifierOutput,
     MaskedLMOutput,
+    MultipleChoiceModelOutput,
     SequenceClassifierOutput,
 )
 
@@ -408,3 +410,78 @@ class DeepSparseModelForMaskedLM(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return MaskedLMOutput(logits=logits)
+
+
+MULTIPLE_CHOICE_EXAMPLE = r"""
+    Example of mutliple choice:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}", export=True)
+
+    >>> num_choices = 4
+    >>> first_sentence = ["Members of the procession walk down the street holding small horn brass instruments."] * num_choices
+    >>> second_sentence = [
+    ...     "A drum line passes by walking down the street playing their instruments.",
+    ...     "A drum line has heard approaching the city.",
+    ...     "A drum line arrives and they're outside dancing and asleep.",
+    ...     "A drum line turns the lead singer watches the performance."
+    ... ]
+    >>> inputs = tokenizer(first_sentence, second_sentence, truncation=True, padding=True)
+
+    # Unflatten the inputs values expanding it to the shape [batch_size, num_choices, seq_length]
+    >>> for k, v in inputs.items():
+    ...     inputs[k] = [v[i: i + num_choices] for i in range(0, len(v), num_choices)]
+    >>> inputs = dict(inputs.convert_to_tensors(tensor_type="pt"))
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a multiple choice classification head on top (a linear layer on top of the pooled output and a
+    softmax) e.g. for RocStories/SWAG tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForMultipleChoice(DeepSparseModel):
+    auto_model_class = AutoModelForMultipleChoice
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + MULTIPLE_CHOICE_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForMultipleChoice",
+            checkpoint="ehdwns1516/bert-base-uncased_SWAG",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return MultipleChoiceModelOutput(logits=logits)
