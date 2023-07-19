@@ -10,6 +10,7 @@ from PIL import Image
 from testing_utils import MODEL_DICT, SEED, TENSOR_ALIAS_TO_TYPE
 from transformers import (
     AutoFeatureExtractor,
+    AutoModel,
     AutoModelForAudioClassification,
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
@@ -24,6 +25,7 @@ from transformers.onnx.utils import get_preprocessor
 import deepsparse
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
+    DeepSparseModelForFeatureExtraction,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForMultipleChoice,
@@ -584,3 +586,105 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
             # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
 
         gc.collect()
+
+
+class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "albert",
+        "bert",
+        "camembert",
+        "distilbert",
+        # "electra",
+        "roberta",
+        # "xlm_roberta"
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForFeatureExtraction
+    TASK = "feature-extraction"
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            #   input_shapes=input_shapes
+        )
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        transformers_model = AutoModel.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        text = "This is a sample output"
+        tokens = tokenizer(
+            text,
+            return_tensors="pt",
+            #    **padding_kwargs
+        )
+        with torch.no_grad():
+            transformers_model(**tokens)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer(
+                text,
+                return_tensors=input_type,
+                #    **padding_kwargs
+            )
+            onnx_outputs = onnx_model(**tokens)
+
+            self.assertIn("last_hidden_state", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.last_hidden_state, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+            # compare tensor outputs
+            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.last_hidden_state), transformers_outputs.last_hidden_state, atol=1e-1))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            #    input_shapes=input_shapes
+        )
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline(
+            "feature-extraction",
+            model=onnx_model,
+            tokenizer=tokenizer,
+            #  **padding_kwargs
+        )
+        text = "My Name is Philipp and i live in Germany."
+        outputs = pipe(text)
+        # compare model output class
+        self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
+        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("feature-extraction")
+        text = "My Name is Derrick and i live in Nairobi."
+        outputs = pipe(text)
+
+        # compare model output class
+        self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))

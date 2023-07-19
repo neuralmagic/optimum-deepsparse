@@ -18,6 +18,7 @@ from transformers import (
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
+    BaseModelOutput,
     ImageClassifierOutput,
     MaskedLMOutput,
     MultipleChoiceModelOutput,
@@ -485,3 +486,84 @@ class DeepSparseModelForMultipleChoice(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return MultipleChoiceModelOutput(logits=logits)
+
+
+FEATURE_EXTRACTION_EXAMPLE = r"""
+    Example of feature extraction with DeepSparse:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+    >>> import torch
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("My name is Philipp and I live in Germany.", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> last_hidden_state = outputs.last_hidden_state
+    >>> list(last_hidden_state.shape)
+    [1, 12, 384]
+    ```
+
+    Example using `transformers.pipeline`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> onnx_extractor = pipeline("feature-extraction", model=model, tokenizer=tokenizer)
+
+    >>> text = "My name is Philipp and I live in Germany."
+    >>> pred = onnx_extractor(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with BaseModelOutput for feature-extraction tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForFeatureExtraction(DeepSparseModel):
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + FEATURE_EXTRACTION_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForFeatureExtraction",
+            checkpoint="optimum/all-MiniLM-L6-v2",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            if attention_mask is None:
+                attention_mask = np.ones_like(input_ids)
+            else:
+                attention_mask = attention_mask.cpu().detach().numpy()
+
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        last_hidden_state = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return BaseModelOutput(last_hidden_state=last_hidden_state)
