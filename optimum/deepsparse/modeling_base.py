@@ -186,7 +186,7 @@ class DeepSparseBaseModel(OptimizedModel):
         self.config = config
         self.model_save_dir = model_save_dir
 
-        self.model = str(model)
+        self.model = model
         self.model_path = Path(self.model)
         self.model_name = self.model_path.name
         self.engine = None
