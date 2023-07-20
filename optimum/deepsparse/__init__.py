@@ -22,10 +22,13 @@ _import_structure = {
         "DeepSparseModel",
         "DeepSparseModelForSequenceClassification",
         "DeepSparseModelForImageClassification",
+<<<<<<< HEAD
         "DeepSparseModelForAudioClassification",
         "DeepSparseModelForMaskedLM",
         "DeepSparseModelForMultipleChoice",
         "DeepSparseModelForFeatureExtraction",
+=======
+>>>>>>> 0a4ababacbb4073857a51dfa61091ece3875c9d5
         "DeepSparseModelForTokenClassification",
     ],
 }
