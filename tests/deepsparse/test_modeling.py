@@ -581,6 +581,7 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
 
         gc.collect()
 
+
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -679,6 +680,5 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         text = "My Name is Derrick and i live in Nairobi."
         outputs = pipe(text)
 
-        # compare model output class
+        # Compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
-
