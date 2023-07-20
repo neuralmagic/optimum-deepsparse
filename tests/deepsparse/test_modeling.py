@@ -740,7 +740,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         text = "This is a sample output"
         tokens = tokenizer(text, return_tensors="pt")
         with torch.no_grad():
-            transformers_outputs = transformers_model(**tokens)
+            transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
             tokens = tokenizer(text, return_tensors=input_type)
