@@ -286,7 +286,6 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         return SequenceClassifierOutput(logits=logits)
 
 
-<<<<<<< HEAD
 AUDIO_CLASSIFICATION_EXAMPLE = r"""
     Example using `transformers.pipelines`:
 
@@ -572,8 +571,6 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
         return BaseModelOutput(last_hidden_state=last_hidden_state)
 
 
-=======
->>>>>>> 0a4ababacbb4073857a51dfa61091ece3875c9d5
 TOKEN_CLASSIFICATION_EXAMPLE = r"""
     Example of token classification:
 
