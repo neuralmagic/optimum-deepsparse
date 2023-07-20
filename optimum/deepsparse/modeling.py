@@ -13,8 +13,8 @@ from transformers import (
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
     AutoModelForMultipleChoice,
-    AutoModelForSequenceClassification,
     AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
@@ -23,8 +23,8 @@ from transformers.modeling_outputs import (
     ImageClassifierOutput,
     MaskedLMOutput,
     MultipleChoiceModelOutput,
-    SequenceClassifierOutput,
     QuestionAnsweringModelOutput,
+    SequenceClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -285,7 +285,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
 
-<<<<<<< HEAD
+
 AUDIO_CLASSIFICATION_EXAMPLE = r"""
     Example using `transformers.pipelines`:
 
@@ -569,9 +569,8 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return BaseModelOutput(last_hidden_state=last_hidden_state)
-    
-=======
->>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
+
+
 QUESTION_ANSWERING_EXAMPLE = r"""
     Example of question answering:
 
@@ -586,7 +585,7 @@ QUESTION_ANSWERING_EXAMPLE = r"""
     >>> question = "What is DeepSparse?"
     >>> context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
     >>> inputs = tokenizer(question, context, return_tensors="np")
-    
+
     >>> outputs = model(**inputs)
     >>> logits = outputs.logits
     >>> list(logits.shape)
@@ -605,7 +604,7 @@ QUESTION_ANSWERING_EXAMPLE = r"""
     >>> context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
 
     >>> qa = pipeline("text-classification", model=model, tokenizer=tokenizer)
-   
+
      >>> pred = qa(question = question, context = context)
     ```
 """
@@ -653,4 +652,4 @@ class DeepSparseModelForQuestionAnswering(DeepSparseModel):
         end_logits = torch.from_numpy(outputs[1]) if use_torch else outputs[1]
 
         # converts output to namedtuple for pipelines post-processing
-        return QuestionAnsweringModelOutput(start_logits=start_logits,end_logits=end_logits)
+        return QuestionAnsweringModelOutput(start_logits=start_logits, end_logits=end_logits)

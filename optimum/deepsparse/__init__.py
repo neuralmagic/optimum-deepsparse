@@ -39,8 +39,8 @@ if TYPE_CHECKING:
         DeepSparseModelForImageClassification,
         DeepSparseModelForMaskedLM,
         DeepSparseModelForMultipleChoice,
-        DeepSparseModelForSequenceClassification,
         DeepSparseModelForQuestionAnswering,
+        DeepSparseModelForSequenceClassification,
     )
 else:
     import sys

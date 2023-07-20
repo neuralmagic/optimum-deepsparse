@@ -15,8 +15,8 @@ from transformers import (
     AutoModelForImageClassification,
     AutoModelForMaskedLM,
     AutoModelForMultipleChoice,
-    AutoModelForSequenceClassification,
     AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
     PretrainedConfig,
     pipeline,
     set_seed,
@@ -24,19 +24,15 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
-<<<<<<< HEAD
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
     DeepSparseModelForFeatureExtraction,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForMultipleChoice,
-    DeepSparseModelForSequenceClassification,
     DeepSparseModelForQuestionAnswering,
+    DeepSparseModelForSequenceClassification,
 )
-=======
-from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification, DeepSparseModelForQuestionAnswering
->>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
 from optimum.utils import (
     logging,
 )
@@ -267,7 +263,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertTrue(isinstance(outputs[0]["label"], str))
 
-<<<<<<< HEAD
+
 class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "audio_spectrogram_transformer",
@@ -697,8 +693,6 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
 
 
-=======
->>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
 class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -761,7 +755,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
 
         tokens = tokenizer("This is a sample output", return_tensors="pt", **padding_kwargs)
         with torch.no_grad():
-            transformers_outputs = transformers_model(**tokens)
+            transformers_model(**tokens)
 
         for input_type in ["pt", "np"]:
             tokens = tokenizer("This is a sample output", return_tensors=input_type, **padding_kwargs)
@@ -795,7 +789,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         pipe = pipeline("question-answering", model=onnx_model, tokenizer=tokenizer, **padding_kwargs)
         question = "What is DeepSparse?"
         context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
-        outputs = pipe(question = question, context = context)
+        outputs = pipe(question=question, context=context)
 
         self.assertGreaterEqual(outputs["score"], 0.0)
         self.assertIsInstance(outputs["answer"], str)
@@ -808,9 +802,8 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         pipe = pipeline("question-answering")
         question = "What is DeepSparse?"
         context = "DeepSparse is sparsity-aware inference runtime offering GPU-class performance on CPUs and APIs to integrate ML into your application."
-        outputs = pipe(question = question, context = context)
+        outputs = pipe(question=question, context=context)
 
         # compare model output class
         self.assertGreaterEqual(outputs["score"], 0.0)
         self.assertIsInstance(outputs["answer"], str)
-        
