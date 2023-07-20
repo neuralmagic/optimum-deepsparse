@@ -506,7 +506,6 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         self.assertIsInstance(outputs[0]["token_str"], str)
 
 
-<<<<<<< HEAD
 class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -582,9 +581,6 @@ class DeepSparseModelForMultipleChoiceIntegrationTest(unittest.TestCase):
 
         gc.collect()
 
-
-=======
->>>>>>> update modeling.py
 class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",
@@ -686,6 +682,3 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
 
-
-if __name__ == "__main__":
-    unittest.main()
