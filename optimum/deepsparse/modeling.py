@@ -9,22 +9,16 @@ from datasets import Dataset
 from transformers import (
     AutoConfig,
     AutoModel,
-    AutoModelForAudioClassification,
     AutoModelForImageClassification,
-    AutoModelForMaskedLM,
-    AutoModelForMultipleChoice,
-    AutoModelForSequenceClassification,
     AutoModelForSemanticSegmentation,
+    AutoModelForSequenceClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
-    BaseModelOutput,
     ImageClassifierOutput,
-    MaskedLMOutput,
-    MultipleChoiceModelOutput,
+    SemanticSegmenterOutput,
     SequenceClassifierOutput,
-    SemanticSegmenterOutput
 )
 
 from .modeling_base import DeepSparseBaseModel
