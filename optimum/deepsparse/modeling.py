@@ -9,14 +9,20 @@ from datasets import Dataset
 from transformers import (
     AutoConfig,
     AutoModel,
+    AutoModelForAudioClassification,
     AutoModelForImageClassification,
+    AutoModelForMaskedLM,
+    AutoModelForMultipleChoice,
     AutoModelForSemanticSegmentation,
     AutoModelForSequenceClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
 from transformers.modeling_outputs import (
+    BaseModelOutput,
     ImageClassifierOutput,
+    MaskedLMOutput,
+    MultipleChoiceModelOutput,
     SemanticSegmenterOutput,
     SequenceClassifierOutput,
 )
@@ -278,6 +284,291 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
+
+
+AUDIO_CLASSIFICATION_EXAMPLE = r"""
+    Example using `transformers.pipelines`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+     >>> from datasets import load_dataset, Audio
+    >>> processor = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> audio_classifier = pipeline("audio-classification", model=model, feature_extractor=processor)
+
+    >>> dataset = load_dataset("PolyAI/minds14", name="en-US", split="train")
+    >>> dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+    >>> sampling_rate = dataset.features["audio"].sampling_rate
+    >>> audio_file = dataset[0]["audio"]["path"]
+    >>> pred = audio_classifier(audio_file)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a audio classification
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForAudioClassification(DeepSparseModel):
+    auto_model_class = AutoModelForAudioClassification
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + AUDIO_CLASSIFICATION_EXAMPLE.format(
+            processor_class=_FEATURE_EXTRACTOR_FOR_DOC,
+            model_class="DeepSparseModelForAudioClassification",
+            checkpoint="optimum/hubert-base-superb-ks",
+        )
+    )
+    def forward(
+        self,
+        input_values: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_values, torch.Tensor)
+        if use_torch:
+            input_values = input_values.cpu().detach().numpy()
+
+        inputs = [input_values]
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return SequenceClassifierOutput(logits=logits)
+
+
+MASKEDLM_EXAMPLE = r"""
+    Example of feature extraction:
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+    >>> import torch
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> inputs = tokenizer("The capital of France is [MASK].", return_tensors="np")
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    >>> list(logits.shape)
+    [1, 8, 28996]
+    ```
+    Example using `transformers.pipeline`:
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> fill_masker = pipeline("fill-mask", model=model, tokenizer=tokenizer)
+    >>> text = "The capital of France is [MASK]."
+    >>> pr
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model for MaskedLM
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForMaskedLM(DeepSparseModel):
+    auto_model_class = AutoModelForMaskedLM
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + MASKEDLM_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForMaskedLM",
+            checkpoint="optimum/bert-base-uncased-for-fill-mask",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return MaskedLMOutput(logits=logits)
+
+
+MULTIPLE_CHOICE_EXAMPLE = r"""
+    Example of mutliple choice:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}", export=True)
+
+    >>> num_choices = 4
+    >>> first_sentence = ["Members of the procession walk down the street holding small horn brass instruments."] * num_choices
+    >>> second_sentence = [
+    ...     "A drum line passes by walking down the street playing their instruments.",
+    ...     "A drum line has heard approaching the city.",
+    ...     "A drum line arrives and they're outside dancing and asleep.",
+    ...     "A drum line turns the lead singer watches the performance."
+    ... ]
+    >>> inputs = tokenizer(first_sentence, second_sentence, truncation=True, padding=True)
+
+    # Unflatten the inputs values expanding it to the shape [batch_size, num_choices, seq_length]
+    >>> for k, v in inputs.items():
+    ...     inputs[k] = [v[i: i + num_choices] for i in range(0, len(v), num_choices)]
+    >>> inputs = dict(inputs.convert_to_tensors(tensor_type="pt"))
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a multiple choice classification head on top (a linear layer on top of the pooled output and a
+    softmax) e.g. for RocStories/SWAG tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForMultipleChoice(DeepSparseModel):
+    auto_model_class = AutoModelForMultipleChoice
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + MULTIPLE_CHOICE_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForMultipleChoice",
+            checkpoint="ehdwns1516/bert-base-uncased_SWAG",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return MultipleChoiceModelOutput(logits=logits)
+
+
+FEATURE_EXTRACTION_EXAMPLE = r"""
+    Example of feature extraction with DeepSparse:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+    >>> import torch
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("My name is Philipp and I live in Germany.", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> last_hidden_state = outputs.last_hidden_state
+    >>> list(last_hidden_state.shape)
+    [1, 12, 384]
+    ```
+
+    Example using `transformers.pipeline`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> onnx_extractor = pipeline("feature-extraction", model=model, tokenizer=tokenizer)
+
+    >>> text = "My name is Philipp and I live in Germany."
+    >>> pred = onnx_extractor(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with BaseModelOutput for feature-extraction tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForFeatureExtraction(DeepSparseModel):
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + FEATURE_EXTRACTION_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForFeatureExtraction",
+            checkpoint="optimum/all-MiniLM-L6-v2",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            if attention_mask is None:
+                attention_mask = np.ones_like(input_ids)
+            else:
+                attention_mask = attention_mask.cpu().detach().numpy()
+
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        last_hidden_state = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return BaseModelOutput(last_hidden_state=last_hidden_state)
 
 
 SEMANTIC_SEGMENTATION_EXAMPLE = r"""
