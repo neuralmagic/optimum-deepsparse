@@ -15,7 +15,7 @@ If you are working on the `optimum-deepsparse` code then you should use an edita
 
 ```
 git clone https://github.com/huggingface/optimum
-git clone https://github.com/huggingface/optimum-deepsparse
+git clone https://github.com/neuralmagic/optimum-deepsparse
 pip install -e optimum -e optimum-deepsparse
 ```
 
