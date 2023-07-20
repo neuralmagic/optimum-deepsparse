@@ -733,7 +733,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("t5 doesn't support task question-answering for the onnx backend", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
