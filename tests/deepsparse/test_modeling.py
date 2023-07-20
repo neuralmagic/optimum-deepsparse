@@ -24,6 +24,7 @@ from transformers import (
 from transformers.onnx.utils import get_preprocessor
 
 import deepsparse
+<<<<<<< HEAD
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
     DeepSparseModelForFeatureExtraction,
@@ -33,6 +34,9 @@ from optimum.deepsparse import (
     DeepSparseModelForSequenceClassification,
     DeepSparseModelForQuestionAnswering,
 )
+=======
+from optimum.deepsparse import DeepSparseModelForImageClassification, DeepSparseModelForSequenceClassification, DeepSparseModelForQuestionAnswering
+>>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
 from optimum.utils import (
     logging,
 )
@@ -263,6 +267,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         self.assertGreaterEqual(outputs[0]["score"], 0.0)
         self.assertTrue(isinstance(outputs[0]["label"], str))
 
+<<<<<<< HEAD
 class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "audio_spectrogram_transformer",
@@ -692,6 +697,8 @@ class DeepSparseModelForFeatureExtractionIntegrationTest(unittest.TestCase):
         self.assertTrue(all(all(isinstance(item, float) for item in row) for row in outputs[0]))
 
 
+=======
+>>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
 class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
     SUPPORTED_ARCHITECTURES = [
         "albert",

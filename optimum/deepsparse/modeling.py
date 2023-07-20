@@ -285,6 +285,7 @@ class DeepSparseModelForSequenceClassification(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return SequenceClassifierOutput(logits=logits)
 
+<<<<<<< HEAD
 AUDIO_CLASSIFICATION_EXAMPLE = r"""
     Example using `transformers.pipelines`:
 
@@ -569,6 +570,8 @@ class DeepSparseModelForFeatureExtraction(DeepSparseModel):
         # converts output to namedtuple for pipelines post-processing
         return BaseModelOutput(last_hidden_state=last_hidden_state)
     
+=======
+>>>>>>> 239220858bf344ff7d1140996fb2b9764e348e19
 QUESTION_ANSWERING_EXAMPLE = r"""
     Example of question answering:
 
