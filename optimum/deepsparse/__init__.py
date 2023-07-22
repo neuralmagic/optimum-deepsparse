@@ -25,6 +25,8 @@ _import_structure = {
         "DeepSparseModelForAudioClassification",
         "DeepSparseModelForMaskedLM",
         "DeepSparseModelForMultipleChoice",
+        "DeepSparseModelForFeatureExtraction",
+        "DeepSparseModelForQuestionAnswering",
     ],
 }
 
@@ -33,9 +35,11 @@ if TYPE_CHECKING:
     from .modeling import (
         DeepSparseModel,
         DeepSparseModelForAudioClassification,
+        DeepSparseModelForFeatureExtraction,
         DeepSparseModelForImageClassification,
         DeepSparseModelForMaskedLM,
         DeepSparseModelForMultipleChoice,
+        DeepSparseModelForQuestionAnswering,
         DeepSparseModelForSequenceClassification,
     )
 else:
