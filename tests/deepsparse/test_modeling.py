@@ -16,7 +16,9 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModelForMultipleChoice,
     AutoModelForQuestionAnswering,
+    AutoModelForSemanticSegmentation,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     PretrainedConfig,
     pipeline,
     set_seed,
@@ -26,12 +28,15 @@ from transformers.onnx.utils import get_preprocessor
 import deepsparse
 from optimum.deepsparse import (
     DeepSparseModelForAudioClassification,
+    DeepSparseModelForCustomTasks,
     DeepSparseModelForFeatureExtraction,
     DeepSparseModelForImageClassification,
     DeepSparseModelForMaskedLM,
     DeepSparseModelForMultipleChoice,
     DeepSparseModelForQuestionAnswering,
+    DeepSparseModelForSemanticSegmentation,
     DeepSparseModelForSequenceClassification,
+    DeepSparseModelForTokenClassification,
 )
 from optimum.utils import (
     logging,
@@ -807,3 +812,231 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         # compare model output class
         self.assertGreaterEqual(outputs["score"], 0.0)
         self.assertIsInstance(outputs["answer"], str)
+
+
+class DeepSparseModelForCustomTasksMIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = ["sbert"]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForCustomTasks
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_model_call(self, model_arch):
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        model = self.MODEL_CLASS.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer("This is a sample output", return_tensors=input_type)
+            outputs = model(**tokens)
+            self.assertIsInstance(outputs.pooler_output, TENSOR_ALIAS_TO_TYPE[input_type])
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline("feature-extraction", model=onnx_model, tokenizer=tokenizer)
+        text = "My Name is Philipp and i live in Germany."
+        outputs = pipe(text)
+
+        # compare model output class
+        self.assertTrue(any(any(isinstance(item, float) for item in row) for row in outputs[0]))
+
+
+class DeepSparseModelForSemanticSegmentationIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "segformer",
+    ]
+
+    ARCH_MODEL_MAP = {}
+
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForSemanticSegmentation
+    TASK = "semantic-segmentation"
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        trfs_model = AutoModelForSemanticSegmentation.from_pretrained(model_id)
+        preprocessor = get_preprocessor(model_id)
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        image = Image.open(requests.get(url, stream=True).raw)
+        inputs = preprocessor(images=image, return_tensors="pt")
+
+        with torch.no_grad():
+            trtfs_outputs = trfs_model(**inputs)
+
+        for input_type in ["pt", "np"]:
+            inputs = preprocessor(images=image, return_tensors=input_type)
+            onnx_outputs = onnx_model(**inputs)
+
+            self.assertIn("logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
+
+            # compare tensor outputs
+            if model_arch not in ["segformer"]:
+                self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), trtfs_outputs.logits, atol=1e-3))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        input_shapes = model_info.input_shapes
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(model_id, export=True, input_shapes=input_shapes)
+        preprocessor = get_preprocessor(model_id)
+        pipe = pipeline("image-segmentation", model=onnx_model, feature_extractor=preprocessor)
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        outputs = pipe(url)
+
+        self.assertTrue(isinstance(outputs[0]["label"], str))
+        self.assertTrue(outputs[0]["mask"] is not None)
+        self.assertTrue(isinstance(outputs[0]["mask"], Image.Image))
+        self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.75)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("image-segmentation")
+        url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+        outputs = pipe(url)
+
+        # compare model output class
+        self.assertTrue(isinstance(outputs[0]["label"], str))
+        self.assertTrue(isinstance(outputs[0]["mask"], Image.Image))
+
+
+class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
+    SUPPORTED_ARCHITECTURES = [
+        "albert",
+        # "bart",
+        "bert",
+        "camembert",
+        "convbert",
+        "deberta",
+        "deberta_v2",
+        "distilbert",
+        # "ibert",
+        # "mbart",
+        "mobilebert",
+        "nystromformer",
+        "roberta",
+        "roformer",
+        # "squeezebert",
+        # "xlm",
+        # "xlm_roberta",
+    ]
+
+    ARCH_MODEL_MAP = {}
+    FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
+    MODEL_CLASS = DeepSparseModelForTokenClassification
+    TASK = "token-classification"
+
+    def test_load_vanilla_transformers_which_is_not_supported(self):
+        with self.assertRaises(Exception) as context:
+            _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
+
+        self.assertIn("Unrecognized configuration class", str(context.exception))
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_compare_to_transformers(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+        # onnx_model = self.MODEL_CLASS.from_pretrained(self.onnx_model_dirs[model_arch])
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            # input_shapes=input_shapes
+        )
+
+        self.assertIsInstance(onnx_model.config, PretrainedConfig)
+
+        set_seed(SEED)
+        transformers_model = AutoModelForTokenClassification.from_pretrained(model_id)
+        tokenizer = get_preprocessor(model_id)
+
+        text = "This is a sample output"
+        tokens = tokenizer(text, return_tensors="pt")
+        with torch.no_grad():
+            transformers_model(**tokens)
+
+        for input_type in ["pt", "np"]:
+            tokens = tokenizer(text, return_tensors=input_type)
+            onnx_outputs = onnx_model(**tokens)
+
+            self.assertIn("logits", onnx_outputs)
+            self.assertIsInstance(onnx_outputs.logits, TENSOR_ALIAS_TO_TYPE[input_type])
+            self.assertIsInstance(onnx_model.engine, deepsparse.Engine)
+            # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+            # compare tensor outputs
+            # self.assertTrue(torch.allclose(torch.Tensor(onnx_outputs.logits), transformers_outputs.logits, atol=1e-1))
+
+        gc.collect()
+
+    @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    def test_pipeline_nm_model(self, model_arch):
+        # model_args = {"test_name": model_arch, "model_arch": model_arch}
+        # self._setup(model_args)
+
+        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+        model_id = model_info.model_id
+
+        onnx_model = self.MODEL_CLASS.from_pretrained(
+            model_id,
+            export=True,
+            # input_shapes=input_shapes
+        )
+        tokenizer = get_preprocessor(model_id)
+        pipe = pipeline("token-classification", model=onnx_model, tokenizer=tokenizer)
+        text = "Norway is beautiful and has great hotels."
+        outputs = pipe(text)
+
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertIsInstance(outputs[0]["word"], str)
+        # self.assertTrue(onnx_model.engine.fraction_of_supported_ops >= 0.8)
+
+        gc.collect()
+
+    @pytest.mark.run_in_series
+    def test_pipeline_model_is_none(self):
+        pipe = pipeline("token-classification")
+        text = "Norway is beautiful and has great hotels."
+        outputs = pipe(text)
+
+        # compare model output class
+        self.assertGreaterEqual(outputs[0]["score"], 0.0)
+        self.assertIsInstance(outputs[0]["word"], str)

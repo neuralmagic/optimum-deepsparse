@@ -14,7 +14,9 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModelForMultipleChoice,
     AutoModelForQuestionAnswering,
+    AutoModelForSemanticSegmentation,
     AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
     EvalPrediction,
 )
 from transformers.file_utils import add_start_docstrings, add_start_docstrings_to_model_forward
@@ -22,9 +24,12 @@ from transformers.modeling_outputs import (
     BaseModelOutput,
     ImageClassifierOutput,
     MaskedLMOutput,
+    ModelOutput,
     MultipleChoiceModelOutput,
     QuestionAnsweringModelOutput,
+    SemanticSegmenterOutput,
     SequenceClassifierOutput,
+    TokenClassifierOutput,
 )
 
 from .modeling_base import DeepSparseBaseModel
@@ -653,3 +658,220 @@ class DeepSparseModelForQuestionAnswering(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return QuestionAnsweringModelOutput(start_logits=start_logits, end_logits=end_logits)
+
+
+CUSTOM_TASKS_EXAMPLE = r"""
+    Example of custom tasks(e.g. a sentence transformers taking `pooler_output` as output):
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("I love burritos!", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> last_hidden_state = outputs.last_hidden_state
+    >>> pooler_output = outputs.pooler_output
+    ```
+
+    Example using `transformers.pipelines`(only if the task is supported):
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.onnxruntime import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> onnx_extractor = pipeline("feature-extraction", model=model, tokenizer=tokenizer)
+
+    >>> text = "I love burritos!"
+    >>> pred = onnx_extractor(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model for for any custom tasks
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForCustomTasks(DeepSparseModel):
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + CUSTOM_TASKS_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForCustomTasks",
+            checkpoint="optimum/sbert-all-MiniLM-L6-with-pooler",
+        )
+    )
+    def forward(self, **kwargs):
+        self.compile()
+
+        use_torch = isinstance(next(iter(kwargs.values())), torch.Tensor)
+        # converts pytorch inputs into numpy inputs for onnx
+        onnx_inputs = self._prepare_onnx_inputs(use_torch=use_torch, **kwargs)
+        onnx_outputs = self.engine(onnx_inputs)
+        outputs = self._prepare_onnx_outputs(onnx_outputs, use_torch=use_torch)
+
+        # converts output to namedtuple for pipelines post-processing
+        return ModelOutput(outputs)
+
+    def _prepare_onnx_inputs(self, use_torch: bool, **kwargs):
+        onnx_inputs = {}
+        inputs = []
+        # converts pytorch inputs into numpy inputs for onnx
+        for input in self.engine.input_names:
+            onnx_inputs[input] = kwargs.pop(input)
+
+            if use_torch:
+                onnx_inputs[input] = onnx_inputs[input].cpu().detach().numpy()
+
+        for key in onnx_inputs.keys():
+            inputs.append(onnx_inputs[key])
+
+        return inputs
+
+    def _prepare_onnx_outputs(self, onnx_outputs, use_torch: bool):
+        outputs = {}
+        # converts onnxruntime outputs into tensor for standard outputs
+        for idx, output in enumerate(self.engine.output_names):
+            outputs[output] = onnx_outputs[idx]
+            if use_torch:
+                outputs[output] = torch.from_numpy(outputs[output])
+
+        return outputs
+
+
+SEMANTIC_SEGMENTATION_EXAMPLE = r"""
+    Example of semantic segmentation using `transformers.pipelines`:
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+
+    >>> preprocessor = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}", export=True, input_shape_dict="dict('pixel_values': [1, 3, 224, 224])", output_shape_dict="dict("logits": [1, 1000])",)
+    >>> pipe = pipeline("semantic-segmentation", model=model, feature_extractor=preprocessor)
+    >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+    >>> outputs = pipe(url)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a SemanticSegmenterOutput for semantic segmentation tasks.
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForSemanticSegmentation(DeepSparseModel):
+    export_feature = "semantic-segmentation"
+    auto_model_class = AutoModelForSemanticSegmentation
+
+    @add_start_docstrings_to_model_forward(
+        IMAGE_INPUTS_DOCSTRING.format("batch_size, num_channels, height, width")
+        + SEMANTIC_SEGMENTATION_EXAMPLE.format(
+            processor_class=_FEATURE_EXTRACTOR_FOR_DOC,
+            model_class="DeepSparseModelForSemanticSegmentation",
+            checkpoint="nvidia/segformer-b0-finetuned-ade-512-512",
+        )
+    )
+    def forward(
+        self,
+        pixel_values: Union[torch.Tensor, np.ndarray],
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(pixel_values, torch.Tensor)
+        if use_torch:
+            pixel_values = pixel_values.cpu().detach().numpy()
+
+        outputs = self.engine(list(np.expand_dims(pixel_values, axis=0)))
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return SemanticSegmenterOutput(logits=logits)
+
+
+TOKEN_CLASSIFICATION_EXAMPLE = r"""
+    Example of token classification:
+
+    ```python
+    >>> from transformers import {processor_class}
+    >>> from optimum.deepsparse import {model_class}
+    >>> import torch
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+
+    >>> inputs = tokenizer("We are flying from Texas to California", return_tensors="np")
+
+    >>> outputs = model(**inputs)
+    >>> logits = outputs.logits
+    >>> list(logits.shape)
+    [1, 2]
+    ```
+
+    Example using `transformers.pipelines`:
+
+    ```python
+    >>> from transformers import {processor_class}, pipeline
+    >>> from optimum.deepsparse import {model_class}
+
+    >>> tokenizer = {processor_class}.from_pretrained("{checkpoint}")
+    >>> model = {model_class}.from_pretrained("{checkpoint}")
+    >>> nm_classifier = pipeline("token-classification", model=model, tokenizer=tokenizer)
+
+    >>> text = "We are flying from Texas to California"
+    >>> pred = nm_classifier(text)
+    ```
+"""
+
+
+@add_start_docstrings(
+    """
+    DeepSparse Model with a token classification head on top (a linear layer on top of the
+    pooled output)
+    """,
+    MODEL_START_DOCSTRING,
+)
+class DeepSparseModelForTokenClassification(DeepSparseModel):
+    auto_model_class = AutoModelForTokenClassification
+
+    @add_start_docstrings_to_model_forward(
+        TEXT_INPUTS_DOCSTRING.format("batch_size, sequence_length")
+        + TOKEN_CLASSIFICATION_EXAMPLE.format(
+            processor_class=_TOKENIZER_FOR_DOC,
+            model_class="DeepSparseModelForTokenClassification",
+            checkpoint="distilbert-base-uncased",
+        )
+    )
+    def forward(
+        self,
+        input_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        attention_mask: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        token_type_ids: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        **kwargs,
+    ):
+        self.compile()
+
+        use_torch = isinstance(input_ids, torch.Tensor)
+        if use_torch:
+            input_ids = input_ids.cpu().detach().numpy()
+            attention_mask = attention_mask.cpu().detach().numpy()
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.cpu().detach().numpy()
+
+        inputs = [input_ids, attention_mask]
+        if token_type_ids is not None:
+            inputs.append(token_type_ids)
+
+        outputs = self.engine(inputs)
+        logits = torch.from_numpy(outputs[0]) if use_torch else outputs[0]
+
+        # converts output to namedtuple for pipelines post-processing
+        return TokenClassifierOutput(logits=logits)
