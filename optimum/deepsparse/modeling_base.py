@@ -906,7 +906,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
             scheduler=sub_models.get("scheduler"),
             feature_extractor=sub_models.get("feature_extractor", None),
             tokenizer_2=sub_models.get("tokenizer_2", None),
-            vae_encoder_model=vae_encoder,
             text_encoder_2_model=text_encoder_2,
             use_io_binding=use_io_binding,
             model_save_dir=model_save_dir,
