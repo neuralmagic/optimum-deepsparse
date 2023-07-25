@@ -32,9 +32,25 @@ from transformers.modeling_outputs import (
     TokenClassifierOutput,
 )
 
-from .modeling_base import DeepSparseBaseModel
+from .modeling_base import DeepSparseBaseModel, DeepSparseStableDiffusionPipelineBase
+
+from optimum.pipelines.diffusers.pipeline_stable_diffusion import StableDiffusionPipelineMixin
+from optimum.pipelines.diffusers.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipelineMixin
+from optimum.pipelines.diffusers.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipelineMixin
+from optimum.pipelines.diffusers.pipeline_stable_diffusion_xl import StableDiffusionXLPipelineMixin
+from optimum.pipelines.diffusers.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipelineMixin
+from transformers import CLIPFeatureExtractor, CLIPTokenizer
+from diffusers import (
+    DDIMScheduler,
+    LMSDiscreteScheduler,
+    PNDMScheduler,
+    StableDiffusionPipeline,
+    StableDiffusionXLImg2ImgPipeline,
+)
 
 
+from pathlib import Path
+from tempfile import TemporaryDirectory
 logger = logging.getLogger(__name__)
 
 
@@ -875,3 +891,17 @@ class DeepSparseModelForTokenClassification(DeepSparseModel):
 
         # converts output to namedtuple for pipelines post-processing
         return TokenClassifierOutput(logits=logits)
+
+class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, StableDiffusionPipelineMixin):
+    def __call__(self, *args, **kwargs):
+        return StableDiffusionPipelineMixin.__call__(self, *args, **kwargs)
+
+
+class DeepSparseStableDiffusionImg2ImgPipeline(DeepSparseStableDiffusionPipelineBase, StableDiffusionImg2ImgPipelineMixin):
+    def __call__(self, *args, **kwargs):
+        return StableDiffusionImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
+
+
+class DeepSparseStableDiffusionInpaintPipeline(DeepSparseStableDiffusionPipelineBase, StableDiffusionInpaintPipelineMixin):
+    def __call__(self, *args, **kwargs):
+        return StableDiffusionInpaintPipelineMixin.__call__(self, *args, **kwargs)
