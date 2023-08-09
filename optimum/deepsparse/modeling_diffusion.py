@@ -32,6 +32,7 @@ from diffusers import (
 from diffusers.schedulers.scheduling_utils import SCHEDULER_CONFIG_NAME
 from diffusers.utils import CONFIG_NAME
 from huggingface_hub import snapshot_download
+from modeling_base import DeepSparseBaseModel
 from transformers import CLIPFeatureExtractor, CLIPTokenizer
 from transformers.file_utils import add_start_docstrings
 
@@ -50,8 +51,6 @@ from optimum.utils import (
     DIFFUSION_MODEL_VAE_DECODER_SUBFOLDER,
     DIFFUSION_MODEL_VAE_ENCODER_SUBFOLDER,
 )
-
-from modeling_base import DeepSparseBaseModel
 
 
 ONNX_WEIGHTS_NAME = "model.onnx"
@@ -171,7 +170,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
 
             sample_size_height = height // self.vae_scale_factor
             sample_size_width = width // self.vae_scale_factor
-            cross_attention_dim = self.temp_unet.config.get("cross_attention_dim")  
+            cross_attention_dim = self.temp_unet.config.get("cross_attention_dim")
             # CLIP is fixed to a max length of 77
             max_seq_len = 77
             vae_input_shapes = [[batch_size, 4, sample_size_width, sample_size_height]]
@@ -550,4 +549,3 @@ class DeepSparseStableDiffusionXLImg2ImgPipeline(
 ):
     def __call__(self, *args, **kwargs):
         return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
-
