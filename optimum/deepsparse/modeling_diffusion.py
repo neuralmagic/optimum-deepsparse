@@ -551,17 +551,3 @@ class DeepSparseStableDiffusionXLImg2ImgPipeline(
     def __call__(self, *args, **kwargs):
         return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
     
-model_id = "CompVis/stable-diffusion-v1-4"
-# model_id = "stabilityai/stable-diffusion-2-1"
-
-pipeline = DeepSparseStableDiffusionImg2ImgPipeline.from_pretrained(model_id,export=True)
-from PIL import Image
-from io import BytesIO
-import requests
-url = "https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg"
-response = requests.get(url)
-init_image = Image.open(BytesIO(response.content)).convert("RGB")
-init_image = init_image.resize((512, 512))
-prompt = "A fantasy landscape, trending on artstation"
-images = pipeline(prompt=prompt, image=init_image, strength=0.75, guidance_scale=7.5).images
-images[0]
