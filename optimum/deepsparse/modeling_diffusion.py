@@ -127,9 +127,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         self.unet_path = unet_path
         self.text_encoder_2_path = text_encoder_2_path
 
-        self.height = None
-        self.width = None
-
         self.compile()
 
         self.tokenizer = tokenizer
@@ -169,8 +166,8 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
             logger.info("Compiling model with static shapes..")
             # Create a dummy Unet in order to load config information
             self.temp_unet = DeepSparseModelUnet(None, self)
-            height = self.height or self.temp_unet.config.get("sample_size") * self.vae_scale_factor
-            width = self.width or self.temp_unet.config.get("sample_size") * self.vae_scale_factor
+            height = self.temp_unet.config.get("sample_size") * self.vae_scale_factor
+            width = self.temp_unet.config.get("sample_size") * self.vae_scale_factor
 
             sample_size_height = height // self.vae_scale_factor
             sample_size_width = width // self.vae_scale_factor
@@ -500,8 +497,8 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
         num_images_per_prompt: int = 1,
         **kwargs,
     ):
-        height = self.height
-        width = self.width
+        height = height
+        width = width
 
         return StableDiffusionPipelineMixin.__call__(
             self,
