@@ -31,6 +31,18 @@ _import_structure = {
         "DeepSparseModelForSemanticSegmentation",
         "DeepSparseModelForTokenClassification",
     ],
+   "modeling_diffusion": [
+        "DeepSparseStableDiffusionXLImg2ImgPipeline",
+        "DeepSparseStableDiffusionXLPipeline",
+        "DeepSparseStabletableDiffusionXLPipelineBase"
+        "DeepSparseStableDiffusionInpaintPipeline",
+        "DeepSparseStableDiffusionImg2ImgPipeline",
+        "DeepSparseStableDiffusionPipeline",
+        "DeepSparseModelVaeEncoder",
+        "DeepSparseModelVaeDecoder",
+        "DeepSparseModelUnet",
+        "DeepSparseModelTextEncoder",
+   ],
 }
 
 # Direct imports for type-checking
@@ -47,6 +59,18 @@ if TYPE_CHECKING:
         DeepSparseModelForSemanticSegmentation,
         DeepSparseModelForSequenceClassification,
         DeepSparseModelForTokenClassification,
+    )
+    from .modeling_diffusion import (
+        DeepSparseStableDiffusionXLImg2ImgPipeline,
+        DeepSparseStableDiffusionXLPipeline,
+        DeepSparseStabletableDiffusionXLPipelineBase,
+        DeepSparseStableDiffusionInpaintPipeline,
+        DeepSparseStableDiffusionImg2ImgPipeline,
+        DeepSparseStableDiffusionPipeline,
+        DeepSparseModelVaeEncoder,
+        DeepSparseModelVaeDecoder,
+        DeepSparseModelUnet,
+        DeepSparseModelTextEncoder,
     )
 else:
     import sys

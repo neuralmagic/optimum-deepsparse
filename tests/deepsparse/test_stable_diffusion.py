@@ -28,7 +28,7 @@ from diffusers.utils import floats_tensor, load_image
 from parameterized import parameterized
 from testing_utils import MODEL_DICT, SEED
 
-from optimum.deepsparse.modeling_diffusion import (
+from optimum.deepsparse import (
     DeepSparseModelTextEncoder,
     DeepSparseModelUnet,
     DeepSparseModelVaeDecoder,
