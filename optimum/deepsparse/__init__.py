@@ -34,7 +34,8 @@ _import_structure = {
     "modeling_diffusion": [
         "DeepSparseStableDiffusionXLImg2ImgPipeline",
         "DeepSparseStableDiffusionXLPipeline",
-        "DeepSparseStabletableDiffusionXLPipelineBase" "DeepSparseStableDiffusionInpaintPipeline",
+        "DeepSparseStabletableDiffusionXLPipelineBase",
+        "DeepSparseStableDiffusionInpaintPipeline",
         "DeepSparseStableDiffusionImg2ImgPipeline",
         "DeepSparseStableDiffusionPipeline",
         "DeepSparseModelVaeEncoder",
