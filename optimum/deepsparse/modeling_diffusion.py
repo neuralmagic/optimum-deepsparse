@@ -51,7 +51,7 @@ from optimum.utils import (
     DIFFUSION_MODEL_VAE_ENCODER_SUBFOLDER,
 )
 
-from .modeling_base import DeepSparseBaseModel
+from modeling_base import DeepSparseBaseModel
 
 
 ONNX_WEIGHTS_NAME = "model.onnx"
@@ -171,8 +171,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
 
             sample_size_height = height // self.vae_scale_factor
             sample_size_width = width // self.vae_scale_factor
-
-            cross_attention_dim = self.temp_unet.config.get("cross_attention_dim")
+            cross_attention_dim = self.temp_unet.config.get("cross_attention_dim")  
             # CLIP is fixed to a max length of 77
             max_seq_len = 77
             vae_input_shapes = [[batch_size, 4, sample_size_width, sample_size_height]]
@@ -497,8 +496,8 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
         num_images_per_prompt: int = 1,
         **kwargs,
     ):
-        height = height
-        width = width
+        height = height or self.unet.config.get("sample_size") * self.vae_scale_factor
+        width = width or self.unet.config.get("sample_size") * self.vae_scale_factor
 
         return StableDiffusionPipelineMixin.__call__(
             self,
@@ -551,3 +550,4 @@ class DeepSparseStableDiffusionXLImg2ImgPipeline(
 ):
     def __call__(self, *args, **kwargs):
         return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
+
