@@ -32,7 +32,7 @@ from diffusers import (
 from diffusers.schedulers.scheduling_utils import SCHEDULER_CONFIG_NAME
 from diffusers.utils import CONFIG_NAME
 from huggingface_hub import snapshot_download
-from modeling_base import DeepSparseBaseModel
+from .modeling_base import DeepSparseBaseModel
 from transformers import CLIPFeatureExtractor, CLIPTokenizer
 from transformers.file_utils import add_start_docstrings
 
@@ -165,8 +165,8 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
             logger.info("Compiling model with static shapes..")
             # Create a dummy Unet in order to load config information
             self.temp_unet = DeepSparseModelUnet(None, self)
-            height = self.temp_unet.config.get("sample_size") * self.vae_scale_factor
-            width = self.temp_unet.config.get("sample_size") * self.vae_scale_factor
+            height = self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
+            width = self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
 
             sample_size_height = height // self.vae_scale_factor
             sample_size_width = width // self.vae_scale_factor
@@ -495,8 +495,8 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
         num_images_per_prompt: int = 1,
         **kwargs,
     ):
-        height = height or self.unet.config.get("sample_size") * self.vae_scale_factor
-        width = width or self.unet.config.get("sample_size") * self.vae_scale_factor
+        height = height or self.unet.config.get("sample_size", 64) * self.vae_scale_factor
+        width = width or self.unet.config.get("sample_size", 64) * self.vae_scale_factor
         self.compile()
 
         return StableDiffusionPipelineMixin.__call__(
@@ -550,3 +550,18 @@ class DeepSparseStableDiffusionXLImg2ImgPipeline(
 ):
     def __call__(self, *args, **kwargs):
         return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
+    
+model_id = "CompVis/stable-diffusion-v1-4"
+# model_id = "stabilityai/stable-diffusion-2-1"
+
+pipeline = DeepSparseStableDiffusionImg2ImgPipeline.from_pretrained(model_id,export=True)
+from PIL import Image
+from io import BytesIO
+import requests
+url = "https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg"
+response = requests.get(url)
+init_image = Image.open(BytesIO(response.content)).convert("RGB")
+init_image = init_image.resize((512, 512))
+prompt = "A fantasy landscape, trending on artstation"
+images = pipeline(prompt=prompt, image=init_image, strength=0.75, guidance_scale=7.5).images
+images[0]
