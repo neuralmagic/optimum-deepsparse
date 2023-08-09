@@ -497,6 +497,7 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
     ):
         height = height or self.unet.config.get("sample_size") * self.vae_scale_factor
         width = width or self.unet.config.get("sample_size") * self.vae_scale_factor
+        self.compile()
 
         return StableDiffusionPipelineMixin.__call__(
             self,
