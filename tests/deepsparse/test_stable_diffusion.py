@@ -243,8 +243,8 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
     # def test_height_width_properties(self, model_arch: str):
     #     model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
     #     model_id = model_info.model_id
-    #     pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
-        # TO DO: Assert that image generate with given dimensions is of those dimensons
+    #     self.MODEL_CLASS.from_pretrained(model_id, export=True)
+    #     # TO DO: Assert that image generate with given dimensions is of those dimensons
 
 
 class DeepSparseStableDiffusionInpaintPipelineTest(DeepSparseStableDiffusionPipelineBaseTest):
