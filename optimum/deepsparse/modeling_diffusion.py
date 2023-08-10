@@ -32,7 +32,6 @@ from diffusers import (
 from diffusers.schedulers.scheduling_utils import SCHEDULER_CONFIG_NAME
 from diffusers.utils import CONFIG_NAME
 from huggingface_hub import snapshot_download
-from .modeling_base import DeepSparseBaseModel
 from transformers import CLIPFeatureExtractor, CLIPTokenizer
 from transformers.file_utils import add_start_docstrings
 
@@ -51,6 +50,8 @@ from optimum.utils import (
     DIFFUSION_MODEL_VAE_DECODER_SUBFOLDER,
     DIFFUSION_MODEL_VAE_ENCODER_SUBFOLDER,
 )
+
+from .modeling_base import DeepSparseBaseModel
 
 
 ONNX_WEIGHTS_NAME = "model.onnx"
@@ -73,11 +74,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
 
     def __init__(
         self,
-        vae_decoder_path: None,
-        vae_encoder_path: None,
-        text_encoder_path: None,
-        unet_path: None,
-        text_encoder_2_path: None,
         config: Dict[str, Any],
         tokenizer: CLIPTokenizer,
         scheduler: Union[DDIMScheduler, PNDMScheduler, LMSDiscreteScheduler],
@@ -85,6 +81,12 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         tokenizer_2: Optional[CLIPTokenizer] = None,
         model_save_dir: Optional[Union[str, Path, TemporaryDirectory]] = None,
         static_shapes: bool = True,
+        vae_decoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
+        vae_encoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
+        text_encoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
+        unet_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
+        text_encoder_2_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
+        **kwargs,
     ):
         """
         Args:
@@ -110,11 +112,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
                 The directory under which the model exported to ONNX was saved.
         """
 
-        # self.shared_attributes_init(
-        #     model: deepsparse.Engine,
-        #     model_save_dir=model_save_dir,
-        # )
-
         self._internal_dict = config
         self.model_save_dir = model_save_dir
 
@@ -126,7 +123,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         self.unet_path = unet_path
         self.text_encoder_2_path = text_encoder_2_path
 
-        self.compile()
+        self.compile(height=None, width=None)
 
         self.tokenizer = tokenizer
         self.tokenizer_2 = tokenizer_2
@@ -149,7 +146,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
             )
         self._internal_dict.pop("vae", None)
 
-    def compile(self, batch_size=1):
+    def compile(self, height, width, batch_size=1):
         unet_batch_size = 2
         # GET THIS FROM THE UNET CONFIG
         # https://github.com/huggingface/optimum/blob/e6f83c550316a0859bc7183d8bdca6a85fffede8/optimum/pipelines/diffusers/pipeline_stable_diffusion.py#L290
@@ -162,21 +159,23 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
             self.vae_scale_factor = 8
 
         if self.is_static:
-            logger.info("Compiling model with static shapes..")
+            logger.info(f"Compiling model with height {height} and width {width}")
             # Create a dummy Unet in order to load config information
             self.temp_unet = DeepSparseModelUnet(None, self)
-            height = self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
-            width = self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
+
+            height = height or self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
+            width = width or self.temp_unet.config.get("sample_size", 64) * self.vae_scale_factor
 
             sample_size_height = height // self.vae_scale_factor
             sample_size_width = width // self.vae_scale_factor
+
             cross_attention_dim = self.temp_unet.config.get("cross_attention_dim")
             # CLIP is fixed to a max length of 77
             max_seq_len = 77
-            vae_input_shapes = [[batch_size, 4, sample_size_width, sample_size_height]]
+            vae_input_shapes = [[batch_size, 4, sample_size_height, sample_size_width]]
             text_encoder_input_shapes = [[batch_size, max_seq_len]]
             unet_input_shapes = [
-                [unet_batch_size, 4, sample_size_width, sample_size_height],
+                [unet_batch_size, 4, sample_size_height, sample_size_width],
                 [1],
                 [unet_batch_size, max_seq_len, cross_attention_dim],
             ]
@@ -364,7 +363,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         if task is None:
             task = cls._auto_model_to_task(cls.auto_model_class)
 
-        save_dir = TemporaryDirectory()
+        save_dir = Path("tmp")
         save_dir_path = Path(save_dir.name)
 
         main_export(
@@ -495,9 +494,15 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
         num_images_per_prompt: int = 1,
         **kwargs,
     ):
+        _height = height
+        _width = width
+
         height = height or self.unet.config.get("sample_size", 64) * self.vae_scale_factor
         width = width or self.unet.config.get("sample_size", 64) * self.vae_scale_factor
-        self.compile()
+
+        if _height and _width:
+            logger.info("Custom dimensions provided.")
+            self.compile(height=_height, width=_width)
 
         return StableDiffusionPipelineMixin.__call__(
             self,
@@ -550,4 +555,3 @@ class DeepSparseStableDiffusionXLImg2ImgPipeline(
 ):
     def __call__(self, *args, **kwargs):
         return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
-    
