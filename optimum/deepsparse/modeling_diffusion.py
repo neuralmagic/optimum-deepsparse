@@ -27,7 +27,6 @@ from diffusers import (
     LMSDiscreteScheduler,
     PNDMScheduler,
     StableDiffusionPipeline,
-    StableDiffusionXLPipeline,
 )
 from diffusers.schedulers.scheduling_utils import SCHEDULER_CONFIG_NAME
 from diffusers.utils import CONFIG_NAME
@@ -39,10 +38,6 @@ import deepsparse
 from optimum.exporters.onnx import main_export
 from optimum.onnx.utils import _get_external_data_paths
 from optimum.pipelines.diffusers.pipeline_stable_diffusion import StableDiffusionPipelineMixin
-from optimum.pipelines.diffusers.pipeline_stable_diffusion_img2img import StableDiffusionImg2ImgPipelineMixin
-from optimum.pipelines.diffusers.pipeline_stable_diffusion_inpaint import StableDiffusionInpaintPipelineMixin
-from optimum.pipelines.diffusers.pipeline_stable_diffusion_xl import StableDiffusionXLPipelineMixin
-from optimum.pipelines.diffusers.pipeline_stable_diffusion_xl_img2img import StableDiffusionXLImg2ImgPipelineMixin
 from optimum.utils import (
     DIFFUSION_MODEL_TEXT_ENCODER_2_SUBFOLDER,
     DIFFUSION_MODEL_TEXT_ENCODER_SUBFOLDER,
@@ -91,7 +86,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
     ):
         """
         Args:
-            vae_decoder_session (`ort.InferenceSession`):
+            vaem_decoder_session (`ort.InferenceSession`):
                 The ONNX Runtime inference session associated to the VAE decoder.
             text_encoder_session (`ort.InferenceSession`):
                 The ONNX Runtime inference session associated to the text encoder.
@@ -530,43 +525,3 @@ class DeepSparseStableDiffusionPipeline(DeepSparseStableDiffusionPipelineBase, S
             num_images_per_prompt=num_images_per_prompt,
             **kwargs,
         )
-
-
-class DeepSparseStableDiffusionImg2ImgPipeline(
-    DeepSparseStableDiffusionPipelineBase, StableDiffusionImg2ImgPipelineMixin
-):
-    def __call__(self, *args, **kwargs):
-        return StableDiffusionImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
-
-
-class DeepSparseStableDiffusionInpaintPipeline(
-    DeepSparseStableDiffusionPipelineBase, StableDiffusionInpaintPipelineMixin
-):
-    def __call__(self, *args, **kwargs):
-        return StableDiffusionInpaintPipelineMixin.__call__(self, *args, **kwargs)
-
-
-class DeepSparseStabletableDiffusionXLPipelineBase(DeepSparseStableDiffusionPipelineBase):
-    auto_model_class = StableDiffusionXLPipeline
-    export_feature = "stable-diffusion-xl"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # additional invisible-watermark dependency for SD XL
-        from optimum.pipelines.diffusers.watermark import StableDiffusionXLWatermarker
-
-        self.watermark = StableDiffusionXLWatermarker()
-
-
-class DeepSparseStableDiffusionXLPipeline(
-    DeepSparseStabletableDiffusionXLPipelineBase, StableDiffusionXLPipelineMixin
-):
-    def __call__(self, *args, **kwargs):
-        return StableDiffusionXLPipelineMixin.__call__(self, *args, **kwargs)
-
-
-class DeepSparseStableDiffusionXLImg2ImgPipeline(
-    DeepSparseStabletableDiffusionXLPipelineBase, StableDiffusionXLImg2ImgPipelineMixin
-):
-    def __call__(self, *args, **kwargs):
-        return StableDiffusionXLImg2ImgPipelineMixin.__call__(self, *args, **kwargs)
