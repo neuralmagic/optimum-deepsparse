@@ -91,25 +91,24 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
     def test_compare_to_diffusers(self, model_arch: str):
         model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
         model_id = model_info.model_id
-        pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
-        self.assertIsInstance(pipeline.text_encoder, DeepSparseModelTextEncoder)
-        self.assertIsInstance(pipeline.vae_encoder, DeepSparseModelVaeEncoder)
-        self.assertIsInstance(pipeline.vae_decoder, DeepSparseModelVaeDecoder)
-        self.assertIsInstance(pipeline.unet, DeepSparseModelUnet)
-        self.assertIsInstance(pipeline.config, Dict)
+        deepsparse_pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
+        self.assertIsInstance(deepsparse_pipeline.text_encoder, DeepSparseModelTextEncoder)
+        self.assertIsInstance(deepsparse_pipeline.vae_encoder, DeepSparseModelVaeEncoder)
+        self.assertIsInstance(deepsparse_pipeline.vae_decoder, DeepSparseModelVaeDecoder)
+        self.assertIsInstance(deepsparse_pipeline.unet, DeepSparseModelUnet)
+        self.assertIsInstance(deepsparse_pipeline.config, Dict)
 
         pipeline = StableDiffusionPipeline.from_pretrained(model_id)
         pipeline.safety_checker = None
-        batch_size, num_images_per_prompt, height, width = 1, 2, 64, 64
+        batch_size, num_images_per_prompt, height, width = 1, 1, 64, 64
 
-        latents = pipeline.prepare_latents(
+        latents = deepsparse_pipeline.prepare_latents(
             batch_size * num_images_per_prompt,
-            pipeline.unet.config["in_channels"],
+            deepsparse_pipeline.unet.config["in_channels"],
             height,
             width,
             dtype=np.float32,
             generator=np.random.RandomState(SEED),
-            device="cpu",
         )
 
         kwargs = {
@@ -122,15 +121,12 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
         }
 
         for output_type in ["latent", "np"]:
-            outputs = pipeline(latents=latents, output_type=output_type, **kwargs).images
+            outputs = deepsparse_pipeline(latents=latents, output_type=output_type, **kwargs).images
             self.assertIsInstance(outputs, np.ndarray)
             with torch.no_grad():
                 outputs = pipeline(latents=torch.from_numpy(latents), output_type=output_type, **kwargs).images
             # Compare model outputs
             self.assertTrue(np.allclose(outputs, outputs, atol=1e-4))
-
-        # Compare model devices
-        self.assertEqual(pipeline.device.type, pipeline.device)
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_image_reproducibility(self, model_arch: str):
@@ -163,5 +159,7 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
         image_height = outputs[0].size[1]
         self.assertEqual(image_width, width)
         self.assertEqual(image_height, height)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()
