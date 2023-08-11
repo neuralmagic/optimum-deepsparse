@@ -28,12 +28,12 @@ jobs:
     - name: Install dependencies
       run: |
         pip install .[tests]
-
     - name: Test with pytest
       working-directory: tests
-      uses: pierotofy/set-swap-space@master
-      with:
-        swap-size-gb: 10
       run: |
-        python -m pytest -vv deepsparse/
-    
+        python -m pytest deepsparse/
+        
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
