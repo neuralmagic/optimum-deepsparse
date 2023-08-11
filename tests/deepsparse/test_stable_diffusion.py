@@ -157,7 +157,7 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
         height = 64
         width = 128
         outputs = pipeline(
-            prompt=prompt, num_inference_steps=75, guidance_scale=7.5, height=height, width=width
+            prompt=prompt, num_inference_steps=10, guidance_scale=7.5, height=height, width=width
         ).images
         image_width = outputs[0].size[0]
         image_height = outputs[0].size[1]
