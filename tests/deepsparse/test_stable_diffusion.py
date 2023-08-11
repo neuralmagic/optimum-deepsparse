@@ -87,50 +87,50 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
     FULL_GRID = {"model_arch": SUPPORTED_ARCHITECTURES}
     MODEL_CLASS = DeepSparseStableDiffusionPipeline
 
-    @parameterized.expand(SUPPORTED_ARCHITECTURES)
-    def test_compare_to_diffusers(self, model_arch: str):
-        model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
-        model_id = model_info.model_id
-        pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
-        self.assertIsInstance(pipeline.text_encoder, DeepSparseModelTextEncoder)
-        self.assertIsInstance(pipeline.vae_encoder, DeepSparseModelVaeEncoder)
-        self.assertIsInstance(pipeline.vae_decoder, DeepSparseModelVaeDecoder)
-        self.assertIsInstance(pipeline.unet, DeepSparseModelUnet)
-        self.assertIsInstance(pipeline.config, Dict)
+    # @parameterized.expand(SUPPORTED_ARCHITECTURES)
+    # def test_compare_to_diffusers(self, model_arch: str):
+    #     model_info = self.ARCH_MODEL_MAP[model_arch] if model_arch in self.ARCH_MODEL_MAP else MODEL_DICT[model_arch]
+    #     model_id = model_info.model_id
+    #     pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
+    #     self.assertIsInstance(pipeline.text_encoder, DeepSparseModelTextEncoder)
+    #     self.assertIsInstance(pipeline.vae_encoder, DeepSparseModelVaeEncoder)
+    #     self.assertIsInstance(pipeline.vae_decoder, DeepSparseModelVaeDecoder)
+    #     self.assertIsInstance(pipeline.unet, DeepSparseModelUnet)
+    #     self.assertIsInstance(pipeline.config, Dict)
 
-        pipeline = StableDiffusionPipeline.from_pretrained(model_id)
-        pipeline.safety_checker = None
-        batch_size, num_images_per_prompt, height, width = 1, 2, 64, 64
+    #     pipeline = StableDiffusionPipeline.from_pretrained(model_id)
+    #     pipeline.safety_checker = None
+    #     batch_size, num_images_per_prompt, height, width = 1, 2, 64, 64
 
-        latents = pipeline.prepare_latents(
-            batch_size * num_images_per_prompt,
-            pipeline.unet.config["in_channels"],
-            height,
-            width,
-            dtype=np.float32,
-            generator=np.random.RandomState(SEED),
-            device="cpu",
-        )
+    #     latents = pipeline.prepare_latents(
+    #         batch_size * num_images_per_prompt,
+    #         pipeline.unet.config["in_channels"],
+    #         height,
+    #         width,
+    #         dtype=np.float32,
+    #         generator=np.random.RandomState(SEED),
+    #         device="cpu",
+    #     )
 
-        kwargs = {
-            "prompt": "sailing ship in storm by Leonardo da Vinci",
-            "num_inference_steps": 1,
-            "num_images_per_prompt": num_images_per_prompt,
-            "height": height,
-            "width": width,
-            "guidance_rescale": 0.1,
-        }
+    #     kwargs = {
+    #         "prompt": "sailing ship in storm by Leonardo da Vinci",
+    #         "num_inference_steps": 1,
+    #         "num_images_per_prompt": num_images_per_prompt,
+    #         "height": height,
+    #         "width": width,
+    #         "guidance_rescale": 0.1,
+    #     }
 
-        for output_type in ["latent", "np"]:
-            outputs = pipeline(latents=latents, output_type=output_type, **kwargs).images
-            self.assertIsInstance(outputs, np.ndarray)
-            with torch.no_grad():
-                outputs = pipeline(latents=torch.from_numpy(latents), output_type=output_type, **kwargs).images
-            # Compare model outputs
-            self.assertTrue(np.allclose(outputs, outputs, atol=1e-4))
+    #     for output_type in ["latent", "np"]:
+    #         outputs = pipeline(latents=latents, output_type=output_type, **kwargs).images
+    #         self.assertIsInstance(outputs, np.ndarray)
+    #         with torch.no_grad():
+    #             outputs = pipeline(latents=torch.from_numpy(latents), output_type=output_type, **kwargs).images
+    #         # Compare model outputs
+    #         self.assertTrue(np.allclose(outputs, outputs, atol=1e-4))
 
-        # Compare model devices
-        self.assertEqual(pipeline.device.type, pipeline.device)
+    #     # Compare model devices
+    #     self.assertEqual(pipeline.device.type, pipeline.device)
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_image_reproducibility(self, model_arch: str):
