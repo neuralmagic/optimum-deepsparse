@@ -159,7 +159,3 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
         image_height = outputs[0].size[1]
         self.assertEqual(image_width, width)
         self.assertEqual(image_height, height)
-
-
-if __name__ == "__main__":
-    unittest.main()
