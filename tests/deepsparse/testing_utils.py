@@ -99,9 +99,9 @@ MODEL_DICT = {
     # custom tasks
     "sbert": ModelInfo("optimum/sbert-all-MiniLM-L6-with-pooler", DEFAULT_TOKEN_SHAPES, DEFAULT_PADDING_KWARGS),
     # stable diffusion
-    "stable-diffusion": "hf-internal-testing/tiny-stable-diffusion-torch",
-    "stable-diffusion-xl": "echarlaix/tiny-random-stable-diffusion-xl",
-    "stable-diffusion-xl-refiner": "echarlaix/tiny-random-stable-diffusion-xl-refiner",
+    "stable-diffusion": ModelInfo("hf-internal-testing/tiny-stable-diffusion-torch"),
+    "stable-diffusion-xl": ModelInfo("echarlaix/tiny-random-stable-diffusion-xl"),
+    "stable-diffusion-xl-refiner": ModelInfo("echarlaix/tiny-random-stable-diffusion-xl-refiner"),
 }
 
 
