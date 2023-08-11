@@ -14,6 +14,7 @@ except Exception as error:
 INSTALL_REQUIRE = [
     "deepsparse-nightly",  # TODO: move to stable release
     "optimum[exporters]>=1.8.0",
+    "diffusers",
 ]
 
 TESTS_REQUIRE = ["pytest", "parameterized", "Pillow", "evaluate", "diffusers", "py-cpuinfo", "torchaudio"]
