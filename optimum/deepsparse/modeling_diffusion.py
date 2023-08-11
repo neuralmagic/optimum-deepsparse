@@ -81,6 +81,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         tokenizer_2: Optional[CLIPTokenizer] = None,
         model_save_dir: Optional[Union[str, Path, TemporaryDirectory]] = None,
         static_shapes: bool = True,
+        device: str = "CPU",
         vae_decoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
         vae_encoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
         text_encoder_path: Optional[Union[str, Path, TemporaryDirectory]] = None,
@@ -122,6 +123,8 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         self.text_encoder_path = text_encoder_path
         self.unet_path = unet_path
         self.text_encoder_2_path = text_encoder_2_path
+
+        self._device = device.upper()
 
         self.compile(height=None, width=None)
 
@@ -394,6 +397,14 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
     def _save_config(self, save_directory):
         self.save_config(save_directory)
 
+    def to(self, device: str):
+        self._device = device.upper()
+        return self
+
+    @property
+    def device(self) -> str:
+        return self._device.lower()
+
 
 # TODO : Use ORTModelPart once IOBinding support is added
 class _DeepSparseDiffusionModelPart:
@@ -417,6 +428,10 @@ class _DeepSparseDiffusionModelPart:
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
+
+    @property
+    def device(self):
+        return self.parent_model._device
 
 
 class DeepSparseModelTextEncoder(_DeepSparseDiffusionModelPart):
