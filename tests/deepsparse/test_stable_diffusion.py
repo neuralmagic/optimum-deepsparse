@@ -72,7 +72,7 @@ class DeepSparseStableDiffusionPipelineBaseTest(unittest.TestCase):
         self.assertTrue(callback_fn.has_been_called)
         self.assertEqual(callback_fn.number_of_steps, inputs["num_inference_steps"])
 
-    def generate_inputs(self, height=128, width=128, batch_size=1):
+    def generate_inputs(self, height=64, width=64, batch_size=1):
         inputs = _generate_inputs(batch_size)
         inputs["height"] = height
         inputs["width"] = width
@@ -151,7 +151,7 @@ class DeepSparseStableDiffusionPipelineTest(unittest.TestCase):
         pipeline = self.MODEL_CLASS.from_pretrained(model_id, export=True)
         prompt = "Surrealist painting of a floating island with giant clock gears, populated with mythical creatures."
         height = 64
-        width = 128
+        width = 64
         outputs = pipeline(
             prompt=prompt, num_inference_steps=10, guidance_scale=7.5, height=height, width=width
         ).images
