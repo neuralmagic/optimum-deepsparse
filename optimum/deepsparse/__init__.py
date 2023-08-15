@@ -61,7 +61,6 @@ if TYPE_CHECKING:
         DeepSparseModelVaeDecoder,
         DeepSparseModelVaeEncoder,
         DeepSparseStableDiffusionPipeline,
-
     )
 else:
     import sys
