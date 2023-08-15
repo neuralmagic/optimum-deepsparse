@@ -32,11 +32,6 @@ _import_structure = {
         "DeepSparseModelForTokenClassification",
     ],
     "modeling_diffusion": [
-        "DeepSparseStableDiffusionXLImg2ImgPipeline",
-        "DeepSparseStableDiffusionXLPipeline",
-        "DeepSparseStabletableDiffusionXLPipelineBase",
-        "DeepSparseStableDiffusionInpaintPipeline",
-        "DeepSparseStableDiffusionImg2ImgPipeline",
         "DeepSparseStableDiffusionPipeline",
         "DeepSparseModelVaeEncoder",
         "DeepSparseModelVaeDecoder",
@@ -65,12 +60,8 @@ if TYPE_CHECKING:
         DeepSparseModelUnet,
         DeepSparseModelVaeDecoder,
         DeepSparseModelVaeEncoder,
-        DeepSparseStableDiffusionImg2ImgPipeline,
-        DeepSparseStableDiffusionInpaintPipeline,
         DeepSparseStableDiffusionPipeline,
-        DeepSparseStableDiffusionXLImg2ImgPipeline,
-        DeepSparseStableDiffusionXLPipeline,
-        DeepSparseStabletableDiffusionXLPipelineBase,
+
     )
 else:
     import sys
