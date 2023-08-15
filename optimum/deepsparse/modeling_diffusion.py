@@ -50,7 +50,6 @@ from .modeling_base import DeepSparseBaseModel
 
 
 ONNX_WEIGHTS_NAME = "model.onnx"
-os.environ["NM_DISABLE_BATCH_OVERRIDE"] = "1"
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +85,14 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
     ):
         """
         Args:
-            vaem_decoder_session (`ort.InferenceSession`):
-                The ONNX Runtime inference session associated to the VAE decoder.
-            text_encoder_session (`ort.InferenceSession`):
-                The ONNX Runtime inference session associated to the text encoder.
-            unet_session (`ort.InferenceSession`):
-                The ONNX Runtime inference session associated to the U-NET.
+            vae_decoder_path (`Optional[Union[str, Path, TemporaryDirectory]]`):
+                Path to VAE encoder ONNX file.
+            vae_encoder_path (`Optional[Union[str, Path, TemporaryDirectory]]`):
+                Path to VAE decoder ONNX file.
+            text_encoder_path (`Optional[Union[str, Path, TemporaryDirectory]]`):
+                Path to text encoder ONNX file.
+            unet_path (`Optional[Union[str, Path, TemporaryDirectory]]`):
+                Path to UNET ONNX file.
             config (`Dict[str, Any]`):
                 A config dictionary from which the model components will be instantiated. Make sure to only load
                 configuration files of compatible classes.
@@ -102,8 +103,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
                 A scheduler to be used in combination with the U-NET component to denoise the encoded image latents.
             feature_extractor (`Optional[CLIPFeatureExtractor]`, defaults to `None`):
                 A model extracting features from generated images to be used as inputs for the `safety_checker`
-            vae_encoder_session (`Optional[ort.InferenceSession]`, defaults to `None`):
-                The ONNX Runtime inference session associated to the VAE encoder.
             model_save_dir (`Optional[str]`, defaults to `None`):
                 The directory under which the model exported to ONNX was saved.
         """
@@ -145,19 +144,16 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         self._internal_dict.pop("vae", None)
 
     def compile(self, height, width, batch_size=1):
+        os.environ["NM_DISABLE_BATCH_OVERRIDE"] = "1"
         unet_batch_size = 2
-        # GET THIS FROM THE UNET CONFIG
-        # https://github.com/huggingface/optimum/blob/e6f83c550316a0859bc7183d8bdca6a85fffede8/optimum/pipelines/diffusers/pipeline_stable_diffusion.py#L290
-
-        # Create a dummy vae decoder in order to load config information
-        self.temp_vae_decoder = DeepSparseModelVaeDecoder(None, self)
-        if "block_out_channels" in self.temp_vae_decoder.config:
-            self.vae_scale_factor = 2 ** (len(self.temp_vae_decoder.config["block_out_channels"]) - 1)
-        else:
-            self.vae_scale_factor = 8
-
         if self.is_static:
             logger.info(f"Compiling model with height {height} and width {width}")
+            # Create a dummy vae decoder in order to load config information
+            self.temp_vae_decoder = DeepSparseModelVaeDecoder(None, self)
+            if "block_out_channels" in self.temp_vae_decoder.config:
+                self.vae_scale_factor = 2 ** (len(self.temp_vae_decoder.config["block_out_channels"]) - 1)
+            else:
+                self.vae_scale_factor = 8
             # Create a dummy Unet in order to load config information
             self.temp_unet = DeepSparseModelUnet(None, self)
 
@@ -196,7 +192,7 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
                 )
 
         else:
-            logger.info("Compiling model with dynamic shapes, not recommended..")
+            logger.info("Compiling model with dynamic shapes, not recommended for performance..")
             self.vae_decoder_engine = deepsparse.Engine(model=str(self.vae_decoder_path), batch_size=batch_size)
             self.vae_encoder_engine = deepsparse.Engine(model=str(self.vae_encoder_path), batch_size=batch_size)
             self.text_encoder_engine = deepsparse.Engine(model=str(self.text_encoder_path), batch_size=batch_size)
@@ -401,7 +397,6 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
         return self._device.lower()
 
 
-# TODO : Use ORTModelPart once IOBinding support is added
 class _DeepSparseDiffusionModelPart:
     """
     For multi-file ONNX models, represents a part of the model.
