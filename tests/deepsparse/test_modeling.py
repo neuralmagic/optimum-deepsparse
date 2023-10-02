@@ -77,7 +77,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("no custom onnx configuration was passed", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
