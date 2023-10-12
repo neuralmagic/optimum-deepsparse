@@ -38,6 +38,7 @@ import deepsparse
 from optimum.exporters.onnx import main_export
 from optimum.onnx.utils import _get_external_data_paths
 from optimum.pipelines.diffusers.pipeline_stable_diffusion import StableDiffusionPipelineMixin
+from optimum.pipelines.diffusers.pipeline_utils import VaeImageProcessor
 from optimum.utils import (
     DIFFUSION_MODEL_TEXT_ENCODER_2_SUBFOLDER,
     DIFFUSION_MODEL_TEXT_ENCODER_SUBFOLDER,
@@ -154,6 +155,9 @@ class DeepSparseStableDiffusionPipelineBase(DeepSparseBaseModel):
                 self.vae_scale_factor = 2 ** (len(self.temp_vae_decoder.config["block_out_channels"]) - 1)
             else:
                 self.vae_scale_factor = 8
+
+            self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
+
             # Create a dummy Unet in order to load config information
             self.temp_unet = DeepSparseModelUnet(None, self)
 
