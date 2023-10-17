@@ -58,3 +58,7 @@ doc: build_doc_docker_image
 		--version_tag_suffix "" \
 		--html \
 		--clean
+
+# neuralmagic: creates wheel file
+build:
+	python3 setup.py sdist bdist_wheel
