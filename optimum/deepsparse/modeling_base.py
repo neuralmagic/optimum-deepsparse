@@ -108,11 +108,11 @@ def override_onnx_input_shapes(
             dim.dim_value = input_shapes[input_idx][dim_idx]
 
     if inplace:
-        logger.info(f"Overwriting in-place the input shapes of the model at {onnx_filepath}")
+        logger.debug(f"Overwriting in-place the input shapes of the model at {onnx_filepath}")
         onnx.save(model, onnx_filepath)
         return onnx_filepath
     else:
-        logger.info(f"Saving new model with static input shapes at {output_path}")
+        logger.debug(f"Saving new model with static input shapes at {output_path}")
         onnx.save(model, output_path)
         return output_path
 
@@ -449,9 +449,8 @@ class DeepSparseBaseModel(OptimizedModel):
                     return
                 self._reshape(self.model)
 
-            logger.info("Compiling...")
             self.engine = deepsparse.Engine(model=self.model, batch_size=batch_size)
-            logger.info(self.engine)
+            logger.debug(self.engine)
 
     def _reshape(
         self,
