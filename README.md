@@ -6,6 +6,11 @@ Accelerated inference of 🤗 models on CPUs using the [DeepSparse Inference Run
 [![DeepSparse Modeling Nightly](https://github.com/neuralmagic/optimum-deepsparse/actions/workflows/test_nightly.yaml/badge.svg)](https://github.com/neuralmagic/optimum-deepsparse/actions/workflows/test_nightly.yaml)
 
 ## Install
+
+There is a PyPi package published at [optimum-deepsparse](https://pypi.org/project/optimum-deepsparse/) so you can simply:
+
+`pip install optimum-deepsparse`
+
 Optimum DeepSparse is a fast-moving project, and you may want to install from source.
 
 `pip install git+https://github.com/neuralmagic/optimum-deepsparse.git`
