@@ -77,7 +77,7 @@ class DeepSparseModelForSequenceClassificationIntegrationTest(unittest.TestCase)
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("no custom onnx configuration was passed", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -196,7 +196,7 @@ class DeepSparseModelForImageClassificationIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -300,7 +300,7 @@ class DeepSparseModelForAudioClassificationIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -423,7 +423,7 @@ class DeepSparseModelForMaskedLMIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -738,7 +738,7 @@ class DeepSparseModelForQuestionAnsweringIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("custom or unsupported architecture", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -863,7 +863,7 @@ class DeepSparseModelForSemanticSegmentationIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
@@ -966,7 +966,7 @@ class DeepSparseModelForTokenClassificationIntegrationTest(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = self.MODEL_CLASS.from_pretrained(MODEL_DICT["t5"].model_id, export=True)
 
-        self.assertIn("Unrecognized configuration class", str(context.exception))
+        self.assertIn("Please use a supported task.", str(context.exception))
 
     @parameterized.expand(SUPPORTED_ARCHITECTURES)
     def test_compare_to_transformers(self, model_arch):
